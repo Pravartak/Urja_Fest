@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function PassportPage() {
+  const router = useRouter()
   const [ccCode, setCcCode] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -12,6 +14,9 @@ export default function PassportPage() {
 
   return (
     <div className="page-container">
+      <button onClick={() => router.back()} className="back-button">
+        ← Back
+      </button>
       <div className="passport-container">
         <div className="passport-card">
           <h1 className="passport-title">CC PASSPORT</h1>
@@ -40,6 +45,26 @@ export default function PassportPage() {
       </div>
 
       <style jsx>{`
+        .back-button {
+          position: fixed;
+          top: 90px;
+          left: 30px;
+          padding: 10px 20px;
+          background: rgba(212, 175, 55, 0.1);
+          border: 1px solid #d4af37;
+          color: #d4af37;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+          transition: all 0.3s ease;
+          z-index: 100;
+        }
+
+        .back-button:hover {
+          background: rgba(212, 175, 55, 0.2);
+          box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+
         .page-container {
           min-height: 100vh;
           display: flex;

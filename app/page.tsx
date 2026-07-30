@@ -42,7 +42,8 @@ export default function Home() {
 
       <div className="page-wrap">
         <section className="hero">
-          <h1 className="hero-title">URJA</h1>
+          <img src="/urja-logo.png" alt="URJA Logo" className="hero-logo" />
+          <h1 className="basic-heading">URJA</h1>
           <p className="hero-tagline">The Legacy Begins Here.</p>
 
           <div className="countdown">

@@ -10,9 +10,8 @@ export default function Gallery() {
 
       <div className="page-wrap">
         <section className="gallery-hero">
-          <div className="eyebrow">🎬 COSMIC MEMORIES</div>
-          <h1 className="hero-title">GALLERY</h1>
-          <p className="hero-tagline">A curated gallery of the finest cosmic moments captured at URJA.</p>
+          <h1 className="basic-heading">Gallery</h1>
+          <p className="hero-tagline">Cosmic moments and memories</p>
         </section>
 
         <section className="section">

@@ -23,9 +23,8 @@ export default function Leaderboard() {
 
       <div className="page-wrap">
         <section className="leaderboard-hero">
-          <div className="eyebrow">🏆 LIVE TRACKING</div>
-          <h1 className="hero-title">LEADERBOARD</h1>
-          <p className="hero-tagline">Real-time PR points tracking across 19 contingents. The galaxy awaits its champion.</p>
+          <h1 className="basic-heading">Leaderboard</h1>
+          <p className="hero-tagline">Real-time rankings for all contingents</p>
         </section>
 
         <section className="section">

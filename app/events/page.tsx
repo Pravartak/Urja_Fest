@@ -73,9 +73,8 @@ export default function Events() {
 
       <div className="page-wrap">
         <section className="events-hero">
-          <div className="eyebrow">🌍 THE COSMIC VOYAGE</div>
-          <h1 className="hero-title">UNIVERSE OF<br />EVENTS</h1>
-          <p className="hero-tagline">Scroll down to travel through the cosmos. Each planet is a battlefield of talent fluing past you.</p>
+          <h1 className="basic-heading">Events</h1>
+          <p className="hero-tagline">Explore all the events taking place during URJA.</p>
         </section>
 
         <section className="section">

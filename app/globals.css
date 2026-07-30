@@ -166,6 +166,21 @@ img {
   padding: 120px 24px 60px;
 }
 
+.hero-logo {
+  max-width: 200px;
+  height: 200px;
+  object-fit: contain;
+  margin-bottom: 20px;
+}
+
+.basic-heading {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 2px;
+  margin: 0;
+}
+
 .hero-title {
   display: inline-block;
   font-family: var(--font-display);
@@ -288,10 +303,11 @@ img {
 
 .section-title {
   margin-bottom: 20px;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: clamp(2.2rem, 5vw, 3.6rem);
-  letter-spacing: 1px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 1.75rem;
+  letter-spacing: 0.5px;
+  color: var(--text);
 }
 
 .accent {

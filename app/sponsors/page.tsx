@@ -10,9 +10,8 @@ export default function Sponsors() {
 
       <div className="page-wrap">
         <section className="sponsors-hero">
-          <div className="eyebrow">🤝 OUR PARTNERS</div>
-          <h1 className="hero-title">SPONSORS</h1>
-          <p className="hero-tagline">Made possible by our amazing sponsors and partners.</p>
+          <h1 className="basic-heading">Sponsors</h1>
+          <p className="hero-tagline">Our partners and supporters</p>
         </section>
 
         <section className="section">

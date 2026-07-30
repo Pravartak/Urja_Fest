@@ -10,8 +10,7 @@ export default function About() {
 
       <div className="page-wrap">
         <section className="about-hero">
-          <h1 className="hero-title">Our Story</h1>
-          <p className="hero-tagline">The Journey of URJA</p>
+          <h1 className="basic-heading">About URJA</h1>
         </section>
 
         <section className="section">
