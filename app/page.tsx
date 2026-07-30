@@ -42,7 +42,9 @@ export default function Home() {
 
       <div className="page-wrap">
         <section className="hero">
-          <img src="/urja-logo.png" alt="URJA Logo" className="hero-logo" />
+          <video autoPlay muted loop className="hero-logo">
+            <source src="/urja-logo.mp4" type="video/mp4" />
+          </video>
           <p className="hero-tagline">The Legacy Begins Here.</p>
 
           <div className="countdown">
