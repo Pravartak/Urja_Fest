@@ -35,9 +35,6 @@ export default function Navbar() {
         <Link href="/sponsors" className={isActive('/sponsors')}>
           SPONSORS
         </Link>
-        <Link href="/admin" className={`passport ${isActive('/admin')}`}>
-          ADMIN
-        </Link>
       </div>
     </nav>
   )
