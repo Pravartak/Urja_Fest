@@ -1,0 +1,67 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CC Passport | URJA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div id="cosmic-bg"></div>
+  <div id="cosmic-vignette"></div>
+
+  <nav class="navbar">
+    <a href="https://www.instagram.com/bakliwal_.computerassociation?igsh=MWR4bHhrenZleGxjMw==" class="brand">
+      <img src="assets/img/cab-logo.png" alt="Computer Association" />
+    </a>
+    <div class="nav-links">
+      <a href="https://share.google/Vsmorf82C2ZMRzOz6"><img src="assets/img/bakliwal-logo.png" alt="Bakliwal Foundation College" class="college-logo" /></a>
+      <a href="index.html">Home</a>
+      <a href="about.html">About</a>
+      <a href="events.html">Events</a>
+      <a href="register.html">Register</a>
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="sponsors.html">Sponsors</a>
+      <a href="passport-login.html" class="passport active" style="background:linear-gradient(90deg, var(--gold), #fff2c9); color:#1a1200;">CC Passport</a>
+    </div>
+  </nav>
+
+  <div class="page-wrap" data-page="passport">
+    <div class="passport-wrap">
+      <div class="passport-icon">🎫</div>
+      <h1 class="passport-title">CC PASSPORT</h1>
+      <p class="lede" style="margin:0 auto; max-width:520px;">Enter your contingent code to unlock the cosmic leaderboard and track your contingent's points.</p>
+
+      <form class="passport-form" onsubmit="event.preventDefault(); alert('Static placeholder. The full passport login is server-backed in the Next.js app.');">
+        <label for="cc">CONTINGENT NAME</label>
+        <input id="cc" name="cc" type="text" placeholder="e.g. CC Andhadhun" />
+        <label for="code">PASSPORT CODE</label>
+        <input id="code" name="code" type="password" placeholder="••••••••" />
+        <button type="submit" class="btn btn-purple-gradient">UNLOCK →</button>
+      </form>
+
+      <p class="passport-hint">Demo codes (in the live app):<br />
+        <strong>CC Andhadhun</strong>: andhadhun2026 ·
+        <strong>CC 13B</strong>: cc13b2026 ·
+        <strong>CC Evaru</strong>: evaru2026 ·
+        <strong>CC Maayavan</strong>: maayavan2026
+      </p>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-grid">
+      <div><h4 class="hero-title" style="font-size:1.5rem; letter-spacing:3px;">⚡URJA</h4><p class="hero-tagline">The Legacy Begins Here</p></div>
+      <div><h4>Quick Links</h4><ul><li><a href="about.html">About</a></li><li><a href="events.html">Events</a></li><li><a href="register.html">Register</a></li></ul></div>
+      <div><h4>Explore</h4><ul><li><a href="leaderboard.html">Leaderboard</a></li><li><a href="gallery.html">Gallery</a></li><li><a href="sponsors.html">Sponsors</a></li></ul></div>
+      <div><h4>Connect</h4><p style="color:var(--text-dim); font-size:0.85rem;">Follow us on Instagram<br/><a style="color:var(--gold);" href="https://www.instagram.com/bakliwal_.computerassociation?igsh=MWR4bHhrenZleGxjMw==">@bakliwal_.computerassociation</a></p></div>
+    </div>
+    <div class="footer-bottom">&copy; <span id="yr"></span> URJA. All Rights Reserved.</div>
+  </footer>
+  <script>document.getElementById("yr").textContent = new Date().getFullYear();</script>
+</body>
+</html>
