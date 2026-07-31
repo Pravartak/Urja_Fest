@@ -47,7 +47,6 @@ export default function Register() {
 
       <div className="page-wrap">
         <section className="register-hero">
-          <div className="eyebrow">🚀 JOIN THE MISSION</div>
           <h1 className="hero-title">REGISTER</h1>
           <p className="hero-tagline">Be part of the cosmic experience. Register now!</p>
         </section>

@@ -51,8 +51,8 @@ export default function PassportPage() {
           left: 30px;
           padding: 10px 20px;
           background: rgba(212, 175, 55, 0.1);
-          border: 1px solid #d4af37;
-          color: #d4af37;
+          border: 1px solid #56158e;
+          color: #ffffff;
           border-radius: 6px;
           cursor: pointer;
           font-weight: 600;
@@ -81,7 +81,7 @@ export default function PassportPage() {
 
         .passport-card {
           background: rgba(20, 10, 40, 0.8);
-          border: 2px solid #d4af37;
+          border: 2px solid #512a65;
           border-radius: 12px;
           padding: 40px;
           backdrop-filter: blur(10px);
@@ -91,7 +91,7 @@ export default function PassportPage() {
         .passport-title {
           font-size: 32px;
           font-weight: bold;
-          color: #d4af37;
+          color: #ffffff;
           text-align: center;
           margin-bottom: 10px;
           text-transform: uppercase;
@@ -118,7 +118,7 @@ export default function PassportPage() {
         }
 
         .form-label {
-          color: #d4af37;
+          color: #ffffff;
           font-size: 14px;
           font-weight: 600;
           text-transform: uppercase;
@@ -148,7 +148,7 @@ export default function PassportPage() {
 
         .submit-btn {
           padding: 12px 24px;
-          background: linear-gradient(135deg, #d4af37, #ff1493);
+          background-color: #d4af37;
           color: #ffffff;
           border: none;
           border-radius: 6px;

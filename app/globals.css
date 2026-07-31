@@ -182,16 +182,13 @@ img {
 }
 
 .hero-title {
-  display: inline-block;
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: clamp(3.5rem, 11vw, 9rem);
-  letter-spacing: 6px;
-  background: linear-gradient(180deg, #fff6df 0%, var(--gold) 55%, #b9832e 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 0 40px rgba(232, 194, 106, 0.35));
+  display: block;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  letter-spacing: 0px;
+  background-color: rgba(255, 255, 255, 0);
+  color: #ffffff;
 }
 
 .hero-tagline {
@@ -254,7 +251,7 @@ img {
 }
 
 .btn-gold {
-  background: linear-gradient(90deg, var(--gold), #fff2c9);
+  background-color: #e8c26a;
   color: #241800;
   box-shadow: 0 8px 30px rgba(232, 194, 106, 0.25);
 }
@@ -539,6 +536,7 @@ img {
 }
 
 /* LEADERBOARD */
+
 .podium {
   display: grid;
   gap: 20px;
@@ -562,18 +560,66 @@ img {
 
 .podium-card.first {
   border-color: var(--gold);
+  transform: translateY(-14px);
   box-shadow: 0 0 50px rgba(232, 194, 106, 0.15);
 }
 
 .podium-card h3 {
-  font-family: var(--font-display);
+  font-family: Orbitron, sans-serif;
   font-size: 1.2rem;
   margin: 14px 0 6px;
 }
 
 .podium-card .pts {
-  font-family: var(--font-display);
+  font-family: Orbitron, sans-serif;
   font-size: 2.2rem;
   font-weight: 800;
+  color: var(--gold);
+}
+
+.lb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 26px;
+}
+
+.lb-rank {
+  width: 40px;
+  font-family: Orbitron, sans-serif;
+  color: var(--text-dim);
+}
+
+.lb-bar-wrap {
+  flex: 1;
+  margin: 0 20px;
+}
+
+.lb-bar {
+  height: 6px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--purple), var(--gold));
+  margin-top: 8px;
+}
+
+.lb-name {
+  flex: 1;
+  font-family: Orbitron, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.lb-pts {
+  font-family: Orbitron, sans-serif;
+  font-weight: 700;
   color: var(--gold);
 }
