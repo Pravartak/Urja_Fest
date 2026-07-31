@@ -187,8 +187,8 @@ img {
   font-weight: 600;
   font-size: 24px;
   letter-spacing: 0px;
-  background-color: #ffffff;
-  color: #000000;
+  background-color: rgba(255, 255, 255, 0);
+  color: #ffffff;
 }
 
 .hero-tagline {
