@@ -50,23 +50,19 @@ export default async function LeaderboardPage() {
                   )}
                 </div>
 
-                <div className="leaderboard-table">
+                <div className="lb-list">
                   {sortedLeaderboard.map((entry, index) => {
                     const barWidth = Math.max(4, (entry.points / maxPoints) * 100);
                     return (
-                      <div key={index} className="leaderboard-row">
-                        <div className="rank">
+                      <div className="lb-row" key={entry.name}>
+                        <div className="lb-rank">
                           {index === 0 ? '🏆' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
                         </div>
-                        <div className="name">
-                          <div className="name-text">{entry.name}</div>
+                        <div className="lb-bar-wrap">
+                          <div className="lb-name">{entry.name}</div>
+                          <div className="lb-bar" style={{ width: `${barWidth}%` }} />
                         </div>
-                        <div className="bar-container">
-                          <div className="bar" style={{ width: `${barWidth}%` }}></div>
-                        </div>
-                        <div className="points">
-                          <span>{entry.points} pts</span>
-                        </div>
+                        <div className="lb-pts">{entry.points} pts</div>
                       </div>
                     );
                   })}
