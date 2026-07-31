@@ -1,5 +1,7 @@
 import { getLeaderboard } from '../../lib/data';
 import { LeaderboardEntry } from '../../lib/types';
+import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
 
 export default async function LeaderboardPage() {
   const leaderboard: LeaderboardEntry[] = await getLeaderboard();
@@ -10,6 +12,7 @@ export default async function LeaderboardPage() {
 
   return (
     <div className="page-wrap" data-page="leaderboard">
+    <Navbar />
       <section className="leaderboard-hero">
         <div className="eyebrow">📈 LIVE RANKINGS</div>
         <h1 className="section-title">🏆 LEADERBOARD</h1>
@@ -74,6 +77,7 @@ export default async function LeaderboardPage() {
           </div>
         )}
       </section>
+      <Footer />
     </div>
   );
 }
