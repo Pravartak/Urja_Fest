@@ -73,7 +73,7 @@ export default function Events() {
 
       <div className="page-wrap">
         <section className="events-hero">
-          <h1 className="basic-heading">Events</h1>
+          <h1 className="hero-title" data-text="Events">Events</h1>
           <p className="hero-tagline">Explore all the events taking place during URJA.</p>
         </section>
 

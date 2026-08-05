@@ -10,11 +10,11 @@ export default function About() {
 
       <div className="page-wrap">
         <section className="about-hero">
-          <h1 className="basic-heading">About URJA</h1>
+          <h1 className="hero-title" data-text="About URJA">About URJA</h1>
         </section>
 
         <section className="section">
-          <h2 className="section-title">Where Innovation meets Art</h2>
+          <h2 className="basic-heading">Where Innovation meets Art</h2>
           <p className="lede" style={{ margin: '0 auto' }}>
             This festival marks the convergence of five distinguished events — Prodigy, Epitome, Technotronix, Mebido, and Ignite — each of which has, over the years, cultivated its own unique identity and legacy. Prodigy represented the pursuit of excellence, Ignite embodied the spark of inspiration, Mebido showcased creative ingenuity, Epitome stood for the highest standards of achievement, and Technotronix celebrated technological advancement.
           </p>

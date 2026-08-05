@@ -85,6 +85,7 @@ img {
   justify-content: space-between;
   padding: 18px 48px;
   background: rgba(5, 1, 16, 0.7);
+  -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
 }
@@ -182,13 +183,36 @@ img {
 }
 
 .hero-title {
-  display: block;
-  font-family: "Space Grotesk", sans-serif;
-  font-weight: 600;
-  font-size: 24px;
-  letter-spacing: 0px;
-  background-color: rgba(255, 255, 255, 0);
-  color: #ffffff;
+  position: relative;
+  display: inline-block;
+  cursor: default;
+  font-family: Orbitron, sans-serif;
+  font-weight: 900;
+  font-size: clamp(3.5rem, 11vw, 9rem);
+  letter-spacing: 6px;
+  background: linear-gradient(180deg, #fff6df 0%, var(--gold) 55%, #b9832e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 40px rgba(232, 194, 106, 0.35));
+}
+
+.hero-title::after {
+  content: attr(data-text);
+  pointer-events: none;
+  position: absolute;
+  inset: 0px;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.75) 48%, rgba(255, 255, 255, 0.95) 50%, rgba(255, 255, 255, 0.75) 52%, transparent 70%);
+  background-size: 250% 100%;
+  background-position: 150% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transition: background-position 0.9s ease;
+}
+
+.hero-title:hover::after {
+  background-position: -50% 0;
 }
 
 .hero-tagline {
@@ -299,12 +323,36 @@ img {
 }
 
 .section-title {
-  margin-bottom: 20px;
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 1.75rem;
-  letter-spacing: 0.5px;
-  color: var(--text);
+  position: relative;
+  display: inline-block;
+  cursor: default;
+  font-family: Orbitron, sans-serif;
+  font-weight: 900;
+  font-size: clamp(3.5rem, 11vw, 9rem);
+  letter-spacing: 6px;
+  background: linear-gradient(180deg, #fff6df 0%, var(--gold) 55%, #b9832e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 40px rgba(232, 194, 106, 0.35));
+}
+
+.section-title::after {
+  content: attr(data-text);
+  pointer-events: none;
+  position: absolute;
+  inset: 0px;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.75) 48%, rgba(255, 255, 255, 0.95) 50%, rgba(255, 255, 255, 0.75) 52%, transparent 70%);
+  background-size: 250% 100%;
+  background-position: 150% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transition: background-position 0.9s ease;
+}
+
+.section-title:hover::after {
+  background-position: -50% 0;
 }
 
 .accent {

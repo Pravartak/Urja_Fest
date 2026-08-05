@@ -10,7 +10,7 @@ export default function Gallery() {
 
       <div className="page-wrap">
         <section className="gallery-hero">
-          <h1 className="basic-heading">Gallery</h1>
+          <h1 className="hero-title" data-text="Gallery">Gallery</h1>
           <p className="hero-tagline">Cosmic moments and memories</p>
         </section>
 

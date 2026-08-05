@@ -42,9 +42,10 @@ export default function Home() {
 
       <div className="page-wrap">
         <section className="hero">
-          <video autoPlay muted loop className="hero-logo">
+          {/* <video autoPlay muted loop className="hero-logo">
             <source src="/urja-logo.mp4" type="video/mp4" />
-          </video>
+          </video> */}
+          <h1 className='hero-title' data-text="URJA">URJA</h1>
           <p className="hero-tagline">The Legacy Begins Here.</p>
 
           <div className="countdown">
@@ -82,7 +83,7 @@ export default function Home() {
         </section>
 
         <section className="section" style={{ textAlign: 'center' }}>
-          <h2 className="section-title">
+          <h2 className="basic-heading">
             Where <span className="accent">Innovation</span> meets Art
           </h2>
           <p className="lede" style={{ margin: '0 auto' }}>
