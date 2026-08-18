@@ -1,3 +1,5 @@
+"use client";
+
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { db } from '@/lib/firebase'
