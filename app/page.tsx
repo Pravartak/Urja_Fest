@@ -15,7 +15,7 @@ export default function Home() {
 
   useEffect(() => {
     const updateCountdown = () => {
-      const eventDate = new Date('2026-12-18T09:00:00').getTime()
+      const eventDate = new Date(2026, 10, 30, 0, 0, 0).getTime()
       const now = new Date().getTime()
       const distance = eventDate - now
 
