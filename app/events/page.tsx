@@ -3,62 +3,57 @@
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { db } from '@/lib/firebase'
-import { collection } from 'firebase/firestore'
-import { useEffect } from 'react'
+import { collection, getDocs } from 'firebase/firestore'
+import { useEffect, useState } from 'react'
 
 type Event = {
-  eventId: number
-  title: string
-  description?: string
-  venue: string
-  date: string
-  time?: string
+  Id: number
+  Title: string
+  Description?: string
+  Venue: string
+  Date_and_Time: string
 }
 
 const day1Events: Event[] = [
   {
-    eventId: 1,
-    title: 'Literature Arts',
-    description: 'A celebration of literary and artistic expression, featuring competitions and showcases.',
-    venue: 'Bakliwal Foundation College',
-    date: '10-26-2026',
-    time: '11AM Onwards',
+    Id: 1,
+    Title: 'Literature Arts',
+    Description: 'A celebration of literary and artistic expression, featuring competitions and showcases.',
+    Venue: 'Bakliwal Foundation College',
+    Date_and_Time: '10-26-2026',
   },
   {
-    eventId: 2,
-    title: 'Fine Arts',
-    description: 'An exhibition of visual arts, including painting, sculpture, and photography.',
-    venue: 'Bakliwal Foundation College',
-    date: '10-26-2026',
-    time: '11AM Onwards',
+    Id: 2,
+    Title: 'Fine Arts',
+    Description: 'An exhibition of visual arts, including painting, sculpture, and photography.',
+    Venue: 'Bakliwal Foundation College',
+    Date_and_Time: '10-26-2026',
   },
 ]
 
 const day2Events: Event[] = [
   {
-    eventId: 3,
-    title: 'Solo Performances',
-    description: 'A showcase of individual talents in music, dance, and drama.',
-    venue: 'Bakliwal Foundation College',
-    date: '10-26-2026',
-    time: '11AM Onwards',
+    Id: 3,
+    Title: 'Solo Performances',
+    Description: 'A showcase of individual talents in music, dance, and drama.',
+    Venue: 'Bakliwal Foundation College',
+    Date_and_Time: '10-26-2026',
   },
   {
-    eventId: 4,
-    title: 'Band Performances',
-    description: 'A series of live band performances featuring various genres of music.',
-    venue: 'Bakliwal Foundation College',
-    date: '10-26-2026',
-    time: '11AM Onwards',
+    Id: 4,
+    Title: 'Band Performances',
+    Description: 'A series of live band performances featuring various genres of music.',
+    Venue: 'Bakliwal Foundation College',
+    Date_and_Time: '10-26-2026',
   },
 ]
 
 const day3Events: Event[] = [
   {
-    eventId: 5,
-    title: 'Audition Videos',
-    venue: 'Bakliwal Foundation College',
-    date: '10-28-2026',
+    Id: 5,
+    Title: 'Audition Videos',
+    Venue: 'Bakliwal Foundation College',
+    Date_and_Time: '10-28-2026',
   },
 ]
 
@@ -72,11 +67,36 @@ const eventDays = [
 ]
 
 export default function Events() {
+  const [day1Events, setDay1Events] = useState<Event | null>(null);
+  const [day2Events, setDay2Events] = useState<Event | null>(null);
+  const [day3Events, setDay3Events] = useState<Event | null>(null);
+  const [day4Events, setDay4Events] = useState<Event | null>(null);
+
   useEffect(() => {
-    const day1 = collection(db, "Day1");
-  const day2 = collection(db, "Day2");
-  const day3 = collection(db, "Day3");
-  const day4 = collection(db, "Day4");
+    async function fetchEvents() {
+      let fetchedDay1: Event[] = [];
+      let fetchedDay2: Event[] = [];
+      let fetchedDay3: Event[] = [];
+      let fetchedDay4: Event[] = [];
+
+      const day1 = collection(db, "Day1");
+      const day2 = collection(db, "Day2");
+      const day3 = collection(db, "Day3");
+      const day4 = collection(db, "Day4");
+
+      const day1Snap = await getDocs(day1);
+      const day2Snap = await getDocs(day2);
+      const day3Snap = await getDocs(day3);
+      const day4Snap = await getDocs(day4);
+
+      fetchedDay1 = day1Snap.docs.map((doc) => ({...doc.data})) as Event[];
+      fetchedDay2 = day2Snap.docs.map((doc) => ({...doc.data})) as Event[];
+      fetchedDay3 = day3Snap.docs.map((doc) => ({...doc.data})) as Event[];
+      fetchedDay4 = day4Snap.docs.map((doc) => ({...doc.data})) as Event[];
+
+      // setDay1Events(fetchedDay1);
+    }
+    fetchEvents();
   });
   return (
     <>
@@ -98,13 +118,13 @@ export default function Events() {
                 {day.events.length > 0 ? (
                   <div className="events-grid">
                     {day.events.map((event) => (
-                      <article key={event.eventId} className="event-card">
-                        <h3>{event.title}</h3>
-                        {event.description && <p>{event.description}</p>}
+                      <article key={event.Id} className="event-card">
+                        <h3>{event.Title}</h3>
+                        {event.Description && <p>{event.Description}</p>}
                         <div className="event-meta">
-                          <span>Date: {event.date}</span>
-                          <span>Venue: {event.venue}</span>
-                          {event.time && <span>Time: {event.time}</span>}
+                          <span>Date: {event.Date_and_Time}</span>
+                          <span>Venue: {event.Venue}</span>
+                          {event.Date_and_Time && <span>Time: {event.Date_and_Time}</span>}
                         </div>
                       </article>
                     ))}
