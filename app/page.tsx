@@ -45,7 +45,7 @@ export default function Home() {
           {/* <video autoPlay muted loop className="hero-logo">
             <source src="/urja-logo.mp4" type="video/mp4" />
           </video> */}
-          <h1 className='hero-title' data-text="URJA">URJA</h1>
+          <h1 className='hero-title' data-text="URJA"><Link href="/">URJA</Link></h1>
           <p className="hero-tagline">The Legacy Begins Here.</p>
 
           <div className="countdown">

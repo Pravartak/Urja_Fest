@@ -1,7 +1,60 @@
+"use client"
+
+import { useEffect, useState } from 'react'
+import { getDownloadURL, listAll, ref, type StorageReference } from 'firebase/storage'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import { storage } from '@/lib/firebase'
+
+type GalleryImage = {
+  name: string
+  url: string
+}
+
+const placeholderStyles = [
+  { icon: '📸', background: 'linear-gradient(135deg, rgba(122,63,228,0.3), rgba(232,69,184,0.2))' },
+  { icon: '🎉', background: 'linear-gradient(135deg, rgba(232,194,106,0.2), rgba(122,63,228,0.2))' },
+  { icon: '🏆', background: 'linear-gradient(135deg, rgba(232,69,184,0.2), rgba(122,63,228,0.3))' },
+]
+
+async function getGalleryImages(folder: StorageReference): Promise<GalleryImage[]> {
+  const result = await listAll(folder)
+  const files = await Promise.all(
+    result.items.map(async (item) => ({
+      name: item.name,
+      url: await getDownloadURL(item),
+    })),
+  )
+  const nestedFiles = await Promise.all(result.prefixes.map(getGalleryImages))
+
+  return [...files, ...nestedFiles.flat()]
+}
 
 export default function Gallery() {
+  const [images, setImages] = useState<GalleryImage[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+
+    async function loadGallery() {
+      try {
+        // Upload photos to gallery/ in the configured idea-matcher Storage bucket.
+        const galleryImages = await getGalleryImages(ref(storage, 'gallery'))
+        if (active) setImages(galleryImages)
+      } catch (error) {
+        console.error('Unable to load gallery images from Firebase Storage:', error)
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+
+    loadGallery()
+    return () => {
+      active = false
+    }
+  }, [])
+
   return (
     <>
       <div className="cosmic-bg" />
@@ -15,53 +68,47 @@ export default function Gallery() {
         </section>
 
         <section className="section">
-          <div className="gallery-grid">
-            <div className="gallery-item">
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '280px',
-                background: 'linear-gradient(135deg, rgba(122,63,228,0.3), rgba(232,69,184,0.2))',
-                borderRadius: '1rem',
-                fontSize: '3rem'
-              }}>
-                📸
-              </div>
+          {images.length > 0 ? (
+            <div className="gallery-grid">
+              {images.map((image) => (
+                <div key={image.url} className="gallery-item">
+                  <img
+                    src={image.url}
+                    alt={image.name.replace(/[-_]/g, ' ').replace(/\.[^.]+$/, '')}
+                    style={{ width: '100%', height: '280px', objectFit: 'cover', borderRadius: '1rem' }}
+                  />
+                </div>
+              ))}
             </div>
-            <div className="gallery-item">
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '280px',
-                background: 'linear-gradient(135deg, rgba(232,194,106,0.2), rgba(122,63,228,0.2))',
-                borderRadius: '1rem',
-                fontSize: '3rem'
-              }}>
-                🎉
-              </div>
+          ) : (
+            <div className="gallery-grid">
+              {placeholderStyles.map((placeholder) => (
+                <div key={placeholder.icon} className="gallery-item">
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '280px',
+                      background: placeholder.background,
+                      borderRadius: '1rem',
+                      fontSize: '3rem',
+                    }}
+                  >
+                    {placeholder.icon}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="gallery-item">
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '280px',
-                background: 'linear-gradient(135deg, rgba(232,69,184,0.2), rgba(122,63,228,0.3))',
-                borderRadius: '1rem',
-                fontSize: '3rem'
-              }}>
-                🏆
-              </div>
-            </div>
-          </div>
+          )}
 
-          <div style={{ marginTop: '80px', textAlign: 'center' }}>
-            <p style={{ color: 'var(--text-dim)', fontSize: '1rem' }}>
-              Gallery coming soon! Stay tuned for epic moments from URJA 2026.
-            </p>
-          </div>
+          {!loading && images.length === 0 && (
+            <div style={{ marginTop: '80px', textAlign: 'center' }}>
+              <p style={{ color: 'var(--text-dim)', fontSize: '1rem' }}>
+                Gallery coming soon! Stay tuned for epic moments from URJA 2026.
+              </p>
+            </div>
+          )}
         </section>
       </div>
 
