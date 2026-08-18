@@ -1,12 +1,18 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 
 export default function Navbar() {
   const pathname = usePathname()
+  const [mounted, setMounted] = useState(false)
 
-  const isActive = (path: string) => pathname === path ? 'active' : ''
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const isActive = (path: string) => mounted && pathname === path ? 'active' : ''
 
   return (
     <nav className="navbar">

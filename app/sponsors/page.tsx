@@ -10,7 +10,7 @@ export default function Sponsors() {
 
       <div className="page-wrap">
         <section className="sponsors-hero">
-          <h1 className="basic-heading">Sponsors</h1>
+          <h1 className="hero-title" data-text="Sponsors">Sponsors</h1>
           <p className="hero-tagline">Our partners and supporters</p>
         </section>
 
