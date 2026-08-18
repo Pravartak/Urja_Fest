@@ -1,7 +1,7 @@
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 
-const events = [
+const events = [ // Mock data (wrong format). Not gonna be used
   {
     id: 1,
     title: 'Deadly Yorker',
@@ -63,6 +63,41 @@ const events = [
     prizes: 'Cert & Prizes',
   },
 ]
+
+const eEvents = [ // Correct format for events, but still mock data. Not gonna be used
+  {
+    eventId: 1,
+    title: "Literature Arts",
+    description: "A celebration of literary and artistic expression, featuring competitions and showcases.",
+    venue: "Bakliwal Foundation College",
+    date: "10-26-2026",
+    time: "11AM Onwards",
+  },
+  {
+    eventId: 2,
+    title: "Fine Arts",
+    description: "An exhibition of visual arts, including painting, sculpture, and photography.",
+    venue: "Bakliwal Foundation College",
+    date: "10-26-2026",
+    time: "11AM Onwards",
+  },
+  {
+    eventId: 3,
+    title: "Solo Performances",
+    description: "A showcase of individual talents in music, dance, and drama.",
+    venue: "Bakliwal Foundation College",
+    date: "10-26-2026",
+    time: "11AM Onwards",
+  },
+  {
+    eventId: 4,
+    title: "Band Performances",
+    description: "A series of live band performances featuring various genres of music.",
+    venue: "Bakliwal Foundation College",
+    date: "10-26-2026",
+    time: "11AM Onwards",
+  }
+];
 
 export default function Events() {
   return (
