@@ -537,6 +537,34 @@ img {
   line-height: 1.6;
 }
 
+.event-days {
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+}
+
+.event-day {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.event-day .section-title {
+  margin-bottom: 0;
+}
+
+.event-day .events-grid {
+  margin-top: 0;
+}
+
+.event-day-empty {
+  padding: 28px;
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
 .event-tag {
   display: inline-block;
   border-radius: 12px;
