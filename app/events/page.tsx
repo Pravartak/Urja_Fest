@@ -1,5 +1,8 @@
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import { db } from '@/lib/firebase'
+import { collection } from 'firebase/firestore'
+import { useEffect } from 'react'
 
 type Event = {
   eventId: number
@@ -67,6 +70,12 @@ const eventDays = [
 ]
 
 export default function Events() {
+  useEffect(() => {
+    const day1 = collection(db, "Day1");
+  const day2 = collection(db, "Day2");
+  const day3 = collection(db, "Day3");
+  const day4 = collection(db, "Day4");
+  });
   return (
     <>
       <div className="cosmic-bg" />
