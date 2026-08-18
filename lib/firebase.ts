@@ -1,5 +1,5 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApp, getApps } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
@@ -23,10 +23,13 @@ const personalStorageConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app);
-const analytics = getAnalytics(app);
+let analytics;
+if (typeof window !== 'undefined') {
+  analytics = getAnalytics(app);
+}
 
 // Initialization for Storage from Personal account
-const personalApp = initializeApp(personalStorageConfig);
+const personalApp = getApps().find(app => app.name === 'personal') || initializeApp(personalStorageConfig, 'personal');
 export const storage = getStorage(personalApp);
