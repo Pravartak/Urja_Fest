@@ -27,7 +27,7 @@ html {
 
 body {
   background: linear-gradient(rgba(5, 1, 16, 0.7), rgba(5, 1, 16, 0.7)), url('/galaxy-bg.png');
-  background-attachment: scroll;
+  background-attachment: fixed;
   background-size: cover;
   background-position: center;
   color: var(--text);
