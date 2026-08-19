@@ -30,6 +30,20 @@ async function getGalleryImages(folder: StorageReference): Promise<GalleryImage[
   return [...files, ...nestedFiles.flat()]
 }
 
+async function preloadImages(images: GalleryImage[]) {
+  await Promise.all(
+    images.map(
+      (image) =>
+        new Promise<void>((resolve) => {
+          const preload = new Image()
+          preload.onload = () => resolve()
+          preload.onerror = () => resolve()
+          preload.src = image.url
+        }),
+    ),
+  )
+}
+
 export default function Gallery() {
   const [images, setImages] = useState<GalleryImage[]>([])
   const [loading, setLoading] = useState(true)
@@ -41,6 +55,7 @@ export default function Gallery() {
       try {
         // Upload photos to gallery/ in the configured idea-matcher Storage bucket.
         const galleryImages = await getGalleryImages(ref(storage, 'gallery'))
+        await preloadImages(galleryImages)
         if (active) setImages(galleryImages)
       } catch (error) {
         console.error('Unable to load gallery images from Firebase Storage:', error)
@@ -54,6 +69,15 @@ export default function Gallery() {
       active = false
     }
   }, [])
+
+  if (loading) {
+    return (
+      <main className="gallery-loading" aria-label="Loading gallery" aria-live="polite">
+        <div className="gallery-loading-spinner" aria-hidden="true" />
+        <p>Loading gallery...</p>
+      </main>
+    )
+  }
 
   return (
     <>
