@@ -27,7 +27,7 @@ html {
 
 body {
   background: linear-gradient(rgba(5, 1, 16, 0.7), rgba(5, 1, 16, 0.7)), url('/galaxy-bg.png');
-  background-attachment: fixed;
+  /* background-attachment: fixed; */
   background-size: cover;
   background-position: center;
   color: var(--text);
@@ -57,7 +57,7 @@ img {
   position: fixed;
   z-index: 0;
   inset: 0;
-  background: linear-gradient(135deg, rgba(5,1,16,0.8) 0%, rgba(26,10,61,0.6) 50%, rgba(5,1,16,0.8) 100%);
+  background: linear-gradient(135deg, rgba(5, 1, 16, 0.8) 0%, rgba(26, 10, 61, 0.6) 50%, rgba(5, 1, 16, 0.8) 100%);
 }
 
 .cosmic-vignette {
@@ -65,7 +65,7 @@ img {
   position: fixed;
   inset: 0;
   z-index: 1;
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(2,0,8,0.65) 100%);
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 40%, rgba(2, 0, 8, 0.65) 100%);
 }
 
 .page-wrap {
@@ -855,7 +855,40 @@ img {
   }
 }
 
+.gallery-loading {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.gallery-loading p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+}
+
+.gallery-loading-spinner {
+  width: 42px;
+  height: 42px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: gallery-spin 0.8s linear infinite;
+}
+
+@keyframes gallery-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 420px) {
+
   .hero,
   .about-hero,
   .register-hero,
