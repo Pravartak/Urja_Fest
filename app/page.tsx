@@ -45,7 +45,7 @@ export default function Home() {
           {/* <video autoPlay muted loop className="hero-logo">
             <source src="/urja-logo.mp4" type="video/mp4" />
           </video> */}
-          <h1 className='hero-title' data-text="URJA"><Link href="https://www.instagram.com/bakliwal_urja?igsh=OHdmNmc0bDYzYWI1&igsi=OHdmNmc0bDYzYWI1">URJA</Link></h1>
+          <h1 className='hero-title' data-text="URJA"><Link href="https://www.instagram.com/bakliwal_urja?igsh=OHdmNmc0bDYzYWI1&igsi=OHdmNmc0bDYzYWI1" target='_blank' rel='noopener noreferrer'>URJA</Link></h1>
           <p className="hero-tagline">The Legacy Begins Here.</p>
 
           <div className="countdown">
