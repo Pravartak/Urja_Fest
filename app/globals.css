@@ -26,10 +26,7 @@ html {
 }
 
 body {
-  background: linear-gradient(rgba(5, 1, 16, 0.7), rgba(5, 1, 16, 0.7)), url('/galaxy-bg.png');
-  background-attachment: fixed;
-  background-size: cover;
-  background-position: center;
+  background: #050110;
   color: var(--text);
   font-family: var(--font-body);
   min-height: 100vh;
