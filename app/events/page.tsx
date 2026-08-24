@@ -1,105 +1,109 @@
+"use client";
+
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import { db } from '@/lib/firebase'
+import { collection, getDocs } from 'firebase/firestore'
+import { useEffect, useState } from 'react'
 
-const events = [ // Mock data (wrong format). Not gonna be used
-  {
-    id: 1,
-    title: 'Deadly Yorker',
-    description: 'A thrilling knockout cricket battle testing teamwork and strategy.',
-    category: 'SPORTS',
-    tag: 'sports',
-    date: 'TBD',
-    location: 'Turf',
-    prizes: 'Cert & Prizes',
-  },
-  {
-    id: 2,
-    title: 'Code Clash',
-    description: 'Competitive programming tournament for coding enthusiasts.',
-    category: 'TECH',
-    tag: 'tech',
-    date: 'TBD',
-    location: 'Lab',
-    prizes: 'Cert & Prizes',
-  },
-  {
-    id: 3,
-    title: 'Art Exhibition',
-    description: 'Showcase of artistic talents and creative expressions.',
-    category: 'CULTURAL',
-    tag: 'cultural',
-    date: 'TBD',
-    location: 'Hall',
-    prizes: 'Cert & Prizes',
-  },
-  {
-    id: 4,
-    title: 'Business Hunt',
-    description: 'Strategic case study competition for management minds.',
-    category: 'MANAGEMENT',
-    tag: 'mgmt',
-    date: 'TBD',
-    location: 'Room',
-    prizes: 'Cert & Prizes',
-  },
-  {
-    id: 5,
-    title: 'Sports Relay',
-    description: 'Fast-paced team relay race combining speed and coordination.',
-    category: 'SPORTS',
-    tag: 'sports',
-    date: 'TBD',
-    location: 'Track',
-    prizes: 'Cert & Prizes',
-  },
-  {
-    id: 6,
-    title: 'Tech Innovation',
-    description: 'Ideas pitch competition for innovative tech solutions.',
-    category: 'TECH',
-    tag: 'tech',
-    date: 'TBD',
-    location: 'Auditorium',
-    prizes: 'Cert & Prizes',
-  },
-]
+type Event = {
+  Id: number | string
+  Name: string
+  Description?: string
+  Venue: string
+  Date_and_Time: string
+}
 
-const eEvents = [ // Correct format for events, but still mock data. Not gonna be used
-  {
-    eventId: 1,
-    title: "Literature Arts",
-    description: "A celebration of literary and artistic expression, featuring competitions and showcases.",
-    venue: "Bakliwal Foundation College",
-    date: "10-26-2026",
-    time: "11AM Onwards",
-  },
-  {
-    eventId: 2,
-    title: "Fine Arts",
-    description: "An exhibition of visual arts, including painting, sculpture, and photography.",
-    venue: "Bakliwal Foundation College",
-    date: "10-26-2026",
-    time: "11AM Onwards",
-  },
-  {
-    eventId: 3,
-    title: "Solo Performances",
-    description: "A showcase of individual talents in music, dance, and drama.",
-    venue: "Bakliwal Foundation College",
-    date: "10-26-2026",
-    time: "11AM Onwards",
-  },
-  {
-    eventId: 4,
-    title: "Band Performances",
-    description: "A series of live band performances featuring various genres of music.",
-    venue: "Bakliwal Foundation College",
-    date: "10-26-2026",
-    time: "11AM Onwards",
+type FirestoreEvent = Partial<Omit<Event, 'Date_and_Time'>> & {
+  Date_and_Time?: unknown
+  Date?: unknown
+}
+
+// The display labels include spaces, but the Firestore collections are named
+// Day1 through Day4. Keep the two values separate so changing the UI label
+// cannot accidentally change the collection being queried.
+const eventDays = [
+  { label: 'Day 1', collectionName: 'Day1' },
+  { label: 'Day 2', collectionName: 'Day2' },
+  { label: 'Day 3', collectionName: 'Day3' },
+  { label: 'Day 4', collectionName: 'Day4' },
+] as const
+
+function formatEventDateTime(value: unknown): string {
+  if (typeof value === 'string') return value
+
+  const timestamp = value as {
+    toDate?: () => Date
+    seconds?: number
+    nanoseconds?: number
+  } | null
+
+  let date: Date | undefined
+  if (timestamp?.toDate) {
+    date = timestamp.toDate()
+  } else if (typeof timestamp?.seconds === 'number') {
+    date = new Date(timestamp.seconds * 1_000)
+  } else if (value instanceof Date) {
+    date = value
   }
-];
+
+  if (!date || Number.isNaN(date.getTime())) return 'Date to be announced'
+
+  const dateOnly = date.getHours() === 0 && date.getMinutes() === 0 && date.getSeconds() === 0
+  return date.toLocaleString(
+    'en-IN',
+    dateOnly
+      ? { dateStyle: 'medium' }
+      : { dateStyle: 'medium', timeStyle: 'short' },
+  )
+}
 
 export default function Events() {
+  const [eventsByDay, setEventsByDay] = useState<Record<string, Event[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function fetchEvents() {
+      try {
+        const snapshots = await Promise.all(
+          eventDays.map(({ collectionName }) => getDocs(collection(db, collectionName))),
+        );
+        const nextEvents = Object.fromEntries(
+          snapshots.map((snapshot, index) => [
+            eventDays[index].label,
+            snapshot.docs.map((eventDoc) => {
+              const data = eventDoc.data() as FirestoreEvent;
+              return {
+                Id: data.Id ?? eventDoc.id,
+                Name: data.Name ?? 'Untitled event',
+                Description: data.Description,
+                Venue: data.Venue ?? 'Venue to be announced',
+                Date_and_Time: formatEventDateTime(data.Date_and_Time ?? data.Date),
+              } satisfies Event;
+            }),
+          ]),
+        );
+
+        if (active) {
+          setEventsByDay(nextEvents);
+          setError(null);
+        }
+      } catch (fetchError) {
+        console.error('[v0] Failed to fetch events from Firestore:', fetchError);
+        if (active) setError('Events are currently unavailable. Please try again later.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    fetchEvents();
+    return () => {
+      active = false;
+    };
+  }, []);
   return (
     <>
       <div className="cosmic-bg" />
@@ -113,21 +117,38 @@ export default function Events() {
         </section>
 
         <section className="section">
-          <div className="events-grid">
-            {events.map((event) => (
-              <div key={event.id} className="event-card">
-                <span className={`event-tag ${event.tag}`}>
-                  📌 {event.category}
-                </span>
-                <h3>{event.title}</h3>
-                <p>{event.description}</p>
-                <div className="event-meta">
-                  <span>📍 {event.location}</span>
-                  <span>🏆 {event.prizes}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div className="event-day-empty">Loading events...</div>
+          ) : error ? (
+            <div className="event-day-empty">{error}</div>
+          ) : (
+            <div className="event-days">
+              {eventDays.map(({ label: day }) => {
+                const dayEvents = eventsByDay[day] ?? [];
+                return (
+                  <section key={day} className="event-day">
+                    <h2 className="section-title">{day}</h2>
+                    {dayEvents.length > 0 ? (
+                      <div className="events-grid">
+                        {dayEvents.map((event) => (
+                          <article key={event.Id} className="event-card">
+                            <h3>{event.Name}</h3>
+                            {event.Description && <p>{event.Description}</p>}
+                            <div className="event-meta">
+                              <span>Date: {event.Date_and_Time}</span>
+                              <span>Venue: {event.Venue}</span>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="event-day-empty">No events announced yet.</div>
+                    )}
+                  </section>
+                );
+              })}
+            </div>
+          )}
         </section>
       </div>
 

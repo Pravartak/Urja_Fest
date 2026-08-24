@@ -15,7 +15,7 @@ export default function Home() {
 
   useEffect(() => {
     const updateCountdown = () => {
-      const eventDate = new Date('2026-12-18T09:00:00').getTime()
+      const eventDate = new Date("2026-10-30T00:00:00Z").getTime()
       const now = new Date().getTime()
       const distance = eventDate - now
 
@@ -45,7 +45,7 @@ export default function Home() {
           {/* <video autoPlay muted loop className="hero-logo">
             <source src="/urja-logo.mp4" type="video/mp4" />
           </video> */}
-          <h1 className='hero-title' data-text="URJA">URJA</h1>
+          <h1 className='hero-title' data-text="URJA"><Link href="https://www.instagram.com/bakliwal_urja?igsh=OHdmNmc0bDYzYWI1&igsi=OHdmNmc0bDYzYWI1" target='_blank' rel='noopener noreferrer'>URJA</Link></h1>
           <p className="hero-tagline">The Legacy Begins Here.</p>
 
           <div className="countdown">
