@@ -1,10 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { formatEventDateTime } from "../events/page";
+import { db } from "@/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
+
+type Event = {
+	Id: number | string;
+	Name: string;
+	Description?: string;
+	Venue: string;
+	Date_and_Time: string;
+};
+
+type FirestoreEvent = Partial<Omit<Event, "Date_and_Time">> & {
+	Date_and_Time?: unknown;
+	Date?: unknown;
+};
+
+// The display labels include spaces, but the Firestore collections are named
+// Day1 through Day4. Keep the two values separate so changing the UI label
+// cannot accidentally change the collection being queried.
+const eventDays = [
+	{ label: "Day 1", collectionName: "Day1" },
+	{ label: "Day 2", collectionName: "Day2" },
+	{ label: "Day 3", collectionName: "Day3" },
+	{ label: "Day 4", collectionName: "Day4" },
+] as const;
 
 export default function Register() {
+	const [eventsByDay, setEventsByDay] = useState<Record<string, Event[]>>({});
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+
 	const [formData, setFormData] = useState({
 		fullName: "",
 		contactNumber: "",
@@ -37,6 +67,56 @@ export default function Register() {
 			{ name: "Fashion Show", fee: "₹180" },
 		],
 	};
+
+	useEffect(() => {
+		let active = true;
+
+		async function fetchEvents() {
+			try {
+				const snapshots = await Promise.all(
+					eventDays.map(({ collectionName }) =>
+						getDocs(collection(db, collectionName)),
+					),
+				);
+				const nextEvents = Object.fromEntries(
+					snapshots.map((snapshot, index) => [
+						eventDays[index].label,
+						snapshot.docs.map((eventDoc) => {
+							const data = eventDoc.data() as FirestoreEvent;
+							return {
+								Id: data.Id ?? eventDoc.id,
+								Name: data.Name ?? "Untitled event",
+								Description: data.Description,
+								Venue: data.Venue ?? "Venue to be announced",
+								Date_and_Time: formatEventDateTime(
+									data.Date_and_Time ?? data.Date,
+								),
+							} satisfies Event;
+						}),
+					]),
+				);
+
+				if (active) {
+					setEventsByDay(nextEvents);
+					setError(null);
+				}
+			} catch (fetchError) {
+				console.error(
+					"[v0] Failed to fetch events from Firestore:",
+					fetchError,
+				);
+				if (active)
+					setError("Events are currently unavailable. Please try again later.");
+			} finally {
+				if (active) setLoading(false);
+			}
+		}
+
+		fetchEvents();
+		return () => {
+			active = false;
+		};
+	}, []);
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (e.target.files && e.target.files[0]) {
@@ -428,7 +508,7 @@ export default function Register() {
 									</label>
 									{/* Placeholder for QR Code image */}
 									<img
-										src="../../assets/img/cab-logo.png" // Replace with your actual QR code image path
+										src="/assets/img/cab-logo.png" // Replace with your actual QR code image path
 										alt="Payment QR Code"
 										style={{
 											maxWidth: "200px",
