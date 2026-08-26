@@ -50,24 +50,6 @@ export default function Register() {
 
 	const [submitted, setSubmitted] = useState(false);
 
-	const mockEvents = {
-		"Day 1": [
-			{ name: "Coding Challenge", fee: "₹100" },
-			{ name: "Quiz Bowl", fee: "₹50" },
-			{ name: "Debate Competition", fee: "₹75" },
-		],
-		"Day 2": [
-			{ name: "Robotics Workshop", fee: "₹200" },
-			{ name: "Gaming Tournament", fee: "₹150" },
-			{ name: "Photography Contest", fee: "₹60" },
-		],
-		"Day 3": [
-			{ name: "Cultural Dance", fee: "₹120" },
-			{ name: "Singing Competition", fee: "₹80" },
-			{ name: "Fashion Show", fee: "₹180" },
-		],
-	};
-
 	useEffect(() => {
 		let active = true;
 
@@ -138,11 +120,12 @@ export default function Register() {
 			return;
 		}
 
-		const { name, value } = target;
-		setFormData((prev) => ({
-			...prev,
-			[name]: value,
-		}));
+			const { name, value } = target;
+			setFormData((prev) => ({
+				...prev,
+				[name]: value,
+				...(name === "selectedDay" ? { selectedEvent: "" } : {}),
+			}));
 	};
 
 	const handleSubmit = (e: any) => {
@@ -320,11 +303,12 @@ export default function Register() {
 										}}>
 										SELECT DAY
 									</label>
-									<select
-										name="selectedDay"
-										value={formData.selectedDay}
-										onChange={handleChange}
-										required
+										<select
+											name="selectedDay"
+											value={formData.selectedDay}
+											onChange={handleChange}
+											required
+											disabled={loading}
 										style={{
 											width: "100%",
 											borderRadius: "10px",
@@ -335,12 +319,12 @@ export default function Register() {
 											fontSize: "0.95rem",
 											fontFamily: "inherit",
 										}}>
-										<option value="">Select a day</option>
-										{Object.keys(mockEvents).map((day) => (
-											<option key={day} value={day}>
-												{day}
-											</option>
-										))}
+											<option value="">Select a day</option>
+											{eventDays.map(({ label: day }) => (
+												<option key={day} value={day}>
+													{day}
+												</option>
+											))}
 									</select>
 								</div>
 
@@ -356,11 +340,12 @@ export default function Register() {
 											}}>
 											SELECT EVENT
 										</label>
-										<select
-											name="selectedEvent"
-											value={formData.selectedEvent}
-											onChange={handleChange}
-											required
+											<select
+												name="selectedEvent"
+												value={formData.selectedEvent}
+												onChange={handleChange}
+												required
+												disabled={loading || Boolean(error) || (eventsByDay[formData.selectedDay] ?? []).length === 0}
 											style={{
 												width: "100%",
 												borderRadius: "10px",
@@ -371,14 +356,18 @@ export default function Register() {
 												fontSize: "0.95rem",
 												fontFamily: "inherit",
 											}}>
-											<option value="">Select an event</option>
-											{mockEvents[
-												formData.selectedDay as keyof typeof mockEvents
-											]?.map((event) => (
-												<option key={event.name} value={event.name}>
-													{event.name} ({event.fee})
+												<option value="">
+													{loading
+														? "Loading events..."
+														: error
+															? "Events unavailable"
+															: "Select an event"}
 												</option>
-											))}
+												{(eventsByDay[formData.selectedDay] ?? []).map((event) => (
+													<option key={event.Id} value={event.Name}>
+														{event.Name}
+													</option>
+												))}
 										</select>
 									</div>
 								)}
