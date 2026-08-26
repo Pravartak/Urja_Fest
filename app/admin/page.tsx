@@ -1,10 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { db } from "@/lib/firebase";
-import { collection, getDocs } from "@firebase/firestore";
+import {
+	addDoc,
+	collection,
+	doc,
+	getDocs,
+	runTransaction,
+	serverTimestamp,
+} from "firebase/firestore";
+
+type CollegeCredential = {
+	id: string;
+	ClCode: string;
+	CollegeName?: string;
+	Name?: string;
+};
+
+type PendingRegistration = {
+	id: string;
+	collegeId: string;
+	collegeName: string;
+	eventName: string;
+	teamLeaderName: string;
+	paymentProof: string;
+};
 
 const mockRegistrations = [
 	{
@@ -37,20 +60,197 @@ const mockRegistrations = [
 	},
 ];
 
+const eventDayCollections = ["Day1", "Day2", "Day3", "Day4"] as const;
+
 export default function Admin() {
-  const [registrations, setRegistrations] = useState([]);
-  const [events, setEvents] = useState([]);
+	const [registrations, setRegistrations] = useState([]);
+	const [events, setEvents] = useState([]);
+	const [colleges, setColleges] = useState<CollegeCredential[]>([]);
+	const [pendingRegistrations, setPendingRegistrations] = useState<
+		PendingRegistration[]
+	>([]);
+	const [processingRegistrationId, setProcessingRegistrationId] = useState<
+		string | null
+	>(null);
+	const [selectedCollegeId, setSelectedCollegeId] = useState("");
+	const [pointAmount, setPointAmount] = useState("");
+	const [pointEvent, setPointEvent] = useState("");
+	const [pointNote, setPointNote] = useState("");
+	const [pointStatus, setPointStatus] = useState("");
+	const [isSavingPoints, setIsSavingPoints] = useState(false);
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	const [password, setPassword] = useState("");
 	const [errorMsg, setErrorMsg] = useState("");
 
-  useEffect(() => {
-    const initializeInfo = async () => {
-      const events = await getDocs(collection(db, "events"));
-      setEvents(events.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    };
-    initializeInfo();
-  }, []); // Need event details to fix event schema (continue from here...)
+	useEffect(() => {
+		const initializeInfo = async () => {
+			try {
+				const [eventDaySnapshots, collegesSnapshot] = await Promise.all([
+					Promise.all(
+						eventDayCollections.map((day) =>
+							getDocs(collection(db, day)),
+						),
+					),
+					getDocs(collection(db, "CollegeCreds")),
+				]);
+				setEvents(
+					eventDaySnapshots.flatMap((snapshot) =>
+						snapshot.docs.map((eventDoc) => ({
+							id: eventDoc.id,
+							...eventDoc.data(),
+						})),
+					),
+				);
+				setColleges(
+					collegesSnapshot.docs.map(
+						(collegeDoc) =>
+							({
+								id: collegeDoc.id,
+								...collegeDoc.data(),
+							}) as CollegeCredential,
+					),
+				);
+				const requestGroups = await Promise.all(
+					collegesSnapshot.docs.map(async (collegeDoc) => {
+						const collegeData = collegeDoc.data() as CollegeCredential;
+						const requestsSnapshot = await getDocs(
+							collection(doc(db, "CollegeCreds", collegeDoc.id), "Requests"),
+						);
+						return requestsSnapshot.docs
+							.filter((requestDoc) => {
+								const status = requestDoc.data().status;
+								return !status || status === "pending";
+							})
+							.map((requestDoc) => {
+								const request = requestDoc.data();
+								return {
+									id: requestDoc.id,
+									collegeId: collegeDoc.id,
+									collegeName:
+										request.collegeName ??
+										collegeData.CollegeName ??
+										collegeData.Name ??
+										collegeData.ClCode,
+									eventName: request.selectedEvent ?? "Event not specified",
+									teamLeaderName: request.fullName ?? "Name not specified",
+									paymentProof:
+										request.paymentProofUrl ??
+										request.paymentProofFileName ??
+										"Not provided",
+								};
+							}) as PendingRegistration[];
+					}),
+				);
+				setPendingRegistrations(requestGroups.flat());
+			} catch (fetchError) {
+				console.error("Failed to load admin data:", fetchError);
+			}
+		};
+		initializeInfo();
+	}, []);
+
+	const handleRegistrationDecision = async (
+		registration: PendingRegistration,
+		decision: "accepted" | "rejected",
+	) => {
+		setProcessingRegistrationId(registration.id);
+		try {
+			const requestRef = doc(
+				db,
+				"CollegeCreds",
+				registration.collegeId,
+				"Requests",
+				registration.id,
+			);
+			const collegeRef = doc(db, "CollegeCreds", registration.collegeId);
+			await runTransaction(db, async (transaction) => {
+				const requestSnapshot = await transaction.get(requestRef);
+				if (!requestSnapshot.exists()) throw new Error("Request not found.");
+				const currentRequest = requestSnapshot.data();
+				if (currentRequest.status && currentRequest.status !== "pending") {
+					throw new Error("Request has already been reviewed.");
+				}
+
+				if (decision === "accepted") {
+					const collegeSnapshot = await transaction.get(collegeRef);
+					if (!collegeSnapshot.exists()) throw new Error("College not found.");
+					const collegeData = collegeSnapshot.data();
+					const currentPoints = Number(
+						collegeData.PRPoints ??
+							collegeData.prPoints ??
+							collegeData.Points ??
+							collegeData.points ??
+							0,
+					);
+					transaction.update(collegeRef, { PRPoints: currentPoints + 50 });
+				}
+
+				transaction.update(requestRef, {
+					status: decision,
+					reviewedAt: serverTimestamp(),
+				});
+			});
+			setPendingRegistrations((current) =>
+				current.filter((item) => item.id !== registration.id),
+			);
+		} catch (decisionError) {
+			console.error("Failed to review registration:", decisionError);
+			setPointStatus(
+				"Could not update the registration. Check Firestore permissions and try again.",
+			);
+		} finally {
+			setProcessingRegistrationId(null);
+		}
+	};
+
+	const handlePointsChange = async (event: FormEvent) => {
+		event.preventDefault();
+		const amount = Number(pointAmount);
+		const selectedCollege = colleges.find(
+			(college) => college.id === selectedCollegeId,
+		);
+		if (!selectedCollege || !Number.isFinite(amount) || amount === 0) {
+			setPointStatus("Select a college and enter a non-zero point amount.");
+			return;
+		}
+		setIsSavingPoints(true);
+		setPointStatus("");
+		try {
+			const collegeRef = doc(db, "CollegeCreds", selectedCollege.id);
+			await runTransaction(db, async (transaction) => {
+				const current = await transaction.get(collegeRef);
+				if (!current.exists())
+					throw new Error("College record no longer exists.");
+				const currentData = current.data();
+				const currentPoints = Number(
+					currentData.PRPoints ??
+						currentData.prPoints ??
+						currentData.Points ??
+						currentData.points ??
+						0,
+				);
+				transaction.update(collegeRef, { PRPoints: currentPoints + amount });
+			});
+			await addDoc(collection(db, "prPointTransactions"), {
+				collegeCode: selectedCollege.ClCode.toUpperCase(),
+				points: amount,
+				event: pointEvent.trim() || "Admin adjustment",
+				note: pointNote.trim() || "PR Points updated by admin",
+				createdAt: serverTimestamp(),
+			});
+			setPointAmount("");
+			setPointEvent("");
+			setPointNote("");
+			setPointStatus("PR Points updated and transaction recorded.");
+		} catch (saveError) {
+			console.error("Failed to update PR Points:", saveError);
+			setPointStatus(
+				"Could not update PR Points. Check Firestore permissions and try again.",
+			);
+		} finally {
+			setIsSavingPoints(false);
+		}
+	};
 
 	const handleLogin = (e: any) => {
 		e.preventDefault();
@@ -233,7 +433,7 @@ export default function Admin() {
 											color: "var(--gold)",
 											marginTop: "10px",
 										}}>
-										6
+										{events.length}
 									</div>
 								</div>
 								<div className="feature-card">
@@ -250,6 +450,162 @@ export default function Admin() {
 									</div>
 								</div>
 							</div>
+
+							<section className="admin-points-panel">
+								<div>
+									<p className="eyebrow">PR POINTS CONTROL</p>
+									<h2 className="basic-heading">Record a points transaction</h2>
+									<p className="admin-points-help">
+										Use a positive value to add points or a negative value to
+										deduct them. Every update appears in the college dashboard
+										history.
+									</p>
+								</div>
+								<form
+									className="admin-points-form"
+									onSubmit={handlePointsChange}>
+									<select
+										value={selectedCollegeId}
+										onChange={(event) =>
+											setSelectedCollegeId(event.target.value)
+										}
+										required>
+										<option value="">Select college</option>
+										{colleges.map((college) => (
+											<option key={college.id} value={college.id}>
+												{college.CollegeName ?? college.Name ?? college.ClCode}{" "}
+												({college.ClCode})
+											</option>
+										))}
+									</select>
+									<input
+										type="number"
+										value={pointAmount}
+										onChange={(event) => setPointAmount(event.target.value)}
+										placeholder="Points, e.g. 50 or -10"
+										required
+									/>
+									<input
+										value={pointEvent}
+										onChange={(event) => setPointEvent(event.target.value)}
+										placeholder="Event name (optional)"
+									/>
+									<input
+										value={pointNote}
+										onChange={(event) => setPointNote(event.target.value)}
+										placeholder="Reason / note (optional)"
+									/>
+									<button
+										type="submit"
+										className="btn btn-purple-gradient"
+										disabled={isSavingPoints}>
+										{isSavingPoints ? "Saving..." : "Update PR Points"}
+									</button>
+								</form>
+								{pointStatus && (
+									<p className="admin-points-status">{pointStatus}</p>
+								)}
+
+								<div style={{ marginTop: "32px" }}>
+									<h3 className="basic-heading" style={{ fontSize: "1.15rem" }}>
+										Pending Registrations
+									</h3>
+									{pendingRegistrations.length === 0 ? (
+										<p className="admin-points-help" style={{ marginTop: "14px" }}>
+											No pending registrations.
+										</p>
+									) : (
+										<div
+											style={{
+												display: "grid",
+												gap: "14px",
+												marginTop: "18px",
+											}}>
+											{pendingRegistrations.map((registration) => {
+												const isProcessing =
+													processingRegistrationId === registration.id;
+												const paymentProofIsUrl = registration.paymentProof.startsWith(
+													"http",
+												);
+												return (
+													<div
+														key={`${registration.collegeId}-${registration.id}`}
+														style={{
+															border: "1px solid var(--border)",
+															borderRadius: "12px",
+															padding: "18px",
+															background: "rgba(0, 0, 0, 0.16)",
+														}}>
+														<div
+															style={{
+																display: "grid",
+																gap: "8px",
+																color: "var(--text-dim)",
+															}}>
+															<div>
+																<strong style={{ color: "var(--text)" }}>Event:</strong>{" "}
+																{registration.eventName}
+															</div>
+															<div>
+																<strong style={{ color: "var(--text)" }}>College:</strong>{" "}
+																{registration.collegeName}
+															</div>
+															<div>
+																<strong style={{ color: "var(--text)" }}>
+																	Team Leader:
+																</strong>{" "}
+																{registration.teamLeaderName}
+															</div>
+															<div>
+																<strong style={{ color: "var(--text)" }}>
+																	Payment Proof:
+																</strong>{" "}
+																{paymentProofIsUrl ? (
+																	<a
+																		href={registration.paymentProof}
+																		target="_blank"
+																		rel="noreferrer"
+																	style={{ color: "var(--gold)" }}>
+																		View proof
+																	</a>
+																) : (
+																	registration.paymentProof
+																)}
+															</div>
+														</div>
+														<div
+															style={{
+																display: "flex",
+																gap: "10px",
+																flexWrap: "wrap",
+																marginTop: "16px",
+															}}>
+															<button
+																type="button"
+																className="btn btn-gold"
+																disabled={isProcessing}
+																onClick={() =>
+																	handleRegistrationDecision(registration, "accepted")
+																}>
+																Accept and Add 50 Points
+															</button>
+															<button
+																type="button"
+																className="btn btn-purple-gradient"
+																disabled={isProcessing}
+																onClick={() =>
+																	handleRegistrationDecision(registration, "rejected")
+																}>
+																Reject
+															</button>
+														</div>
+													</div>
+												);
+											})}
+										</div>
+									)}
+								</div>
+							</section>
 
 							<h2 className="basic-heading">Recent Registrations</h2>
 
