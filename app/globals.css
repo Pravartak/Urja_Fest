@@ -1044,13 +1044,40 @@ img {
 .transaction-sign.is-credit { background: rgba(111, 227, 163, 0.12); }
 .transaction-sign.is-debit { background: rgba(255, 138, 138, 0.12); }
 
-.admin-points-panel { margin-bottom: 54px; padding: 28px; background: var(--card); border: 1px solid var(--border); border-radius: 18px; }
-.admin-points-help { margin-top: 10px; color: var(--text-dim); font-size: 0.9rem; line-height: 1.6; }
-.admin-points-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 22px; }
-.admin-points-form select { width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px; background: rgba(0,0,0,0.25); color: var(--text); font: inherit; }
-.admin-points-form select:disabled { cursor: not-allowed; opacity: 0.45; }
-.admin-points-form button { grid-column: 1 / -1; justify-content: center; }
-.admin-award-summary { display: flex; align-items: center; justify-content: space-between; grid-column: 1 / -1; padding: 16px 18px; border: 1px solid rgba(232,194,106,0.4); border-radius: 12px; background: rgba(232,194,106,0.1); color: var(--text-dim); }
-.admin-award-summary strong { color: var(--gold); font-family: var(--font-display); font-size: 1.2rem; }
-.admin-points-status { margin: 15px 0 0; color: var(--gold); font-size: 0.88rem; }
-@media (max-width: 700px) { .transaction-row { align-items: flex-start; padding: 18px; } .transaction-row > strong { min-width: 76px; font-size: 1.05rem; } .admin-points-form { grid-template-columns: 1fr; } }
+.admin-points-panel {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 54px;
+  padding: clamp(24px, 4vw, 38px);
+  background: linear-gradient(135deg, rgba(35, 18, 70, 0.96), rgba(16, 10, 39, 0.98));
+  border: 1px solid rgba(173, 105, 255, 0.42);
+  border-radius: 24px;
+  box-shadow: 0 22px 60px rgba(7, 2, 21, 0.42), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.admin-points-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, #8d48ed, #df43bd, var(--gold));
+}
+.admin-points-panel .eyebrow { color: #d28cff; letter-spacing: 0.2em; }
+.admin-points-panel .basic-heading { margin-top: 8px; font-size: clamp(1.55rem, 3vw, 2.15rem); }
+.admin-points-help { max-width: 720px; margin-top: 10px; color: var(--text-dim); font-size: 0.94rem; line-height: 1.65; }
+.admin-points-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 26px; }
+.admin-points-form select {
+  width: 100%; min-height: 52px; padding: 13px 40px 13px 16px;
+  border: 1px solid rgba(215, 183, 255, 0.28); border-radius: 12px;
+  background-color: rgba(8, 5, 24, 0.72); color: var(--text); font: inherit;
+  cursor: pointer; transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+.admin-points-form select:hover:not(:disabled) { background-color: rgba(21, 11, 49, 0.92); border-color: rgba(210, 140, 255, 0.62); }
+.admin-points-form select:focus-visible { outline: none; border-color: #d28cff; box-shadow: 0 0 0 3px rgba(210, 140, 255, 0.18); }
+.admin-points-form select:disabled { cursor: not-allowed; opacity: 0.42; }
+.admin-points-form select option { background: #17102e; color: var(--text); }
+.admin-points-form button { grid-column: 1 / -1; justify-content: center; min-height: 52px; margin-top: 4px; box-shadow: 0 10px 24px rgba(194, 57, 210, 0.22); }
+.admin-award-summary { display: flex; align-items: center; justify-content: space-between; grid-column: 1 / -1; gap: 18px; padding: 16px 18px; border: 1px solid rgba(232,194,106,0.42); border-radius: 14px; background: linear-gradient(100deg, rgba(232,194,106,0.12), rgba(232,194,106,0.04)); color: var(--text-dim); }
+.admin-award-summary strong { color: var(--gold); font-family: var(--font-display); font-size: 1.25rem; white-space: nowrap; }
+.admin-points-status { margin: 16px 0 0; color: var(--gold); font-size: 0.88rem; }
+@media (max-width: 900px) { .admin-points-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .transaction-row { align-items: flex-start; padding: 18px; } .transaction-row > strong { min-width: 76px; font-size: 1.05rem; } .admin-points-form { grid-template-columns: 1fr; } .admin-award-summary { align-items: flex-start; flex-direction: column; gap: 6px; } }
