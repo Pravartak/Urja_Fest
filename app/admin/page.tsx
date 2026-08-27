@@ -6,6 +6,7 @@ import Footer from "../components/Footer";
 import { db } from "@/lib/firebase";
 import {
   addDoc,
+  arrayUnion,
   collection,
   doc,
   getDocs,
@@ -205,6 +206,7 @@ export default function Admin() {
               0,
           );
           transaction.update(collegeRef, { PRPoints: currentPoints + 50 });
+          transaction.update(collegeRef, { Teams: arrayUnion(requestRef.id) });
           await addDoc(acceptedRef, requestRef);
         }
 
