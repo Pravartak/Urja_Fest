@@ -1,118 +1,206 @@
+"use client";
+
 import Link from "next/link";
+import { use, useEffect, useState } from "react";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
+import { db } from "@/lib/firebase";
 
 type College = {
-	name: string;
 	code: string;
+	name: string;
 	city: string;
 	description: string;
-	teams: Team[];
-};
-
-type Team = {
-	name: string;
-	captain: string;
 	participants: number;
-	points: number;
 	events: string[];
+	prPoints: number;
+};
+type PointTransaction = {
+	id: string;
+	event: string;
+	note: string;
+	points: number;
+	createdAt?: unknown;
 };
 
-type Event = {
-  // name: string;
-  category: string;
-  date: string;
-};
-
-const mockColleges: Record<string, College> = {
-	bfc: {
-		name: "Bakliwal Foundation College",
-		code: "BFC",
-		city: "Pune, Maharashtra",
-		description:
-			"A community of curious builders, bold performers, and spirited competitors representing BFC at URJA.",
-		teams: [
-			{
-				name: "The Trailblazers",
-				captain: "Aarav Kulkarni",
-				participants: 8,
-				points: 128,
-				events: ["Code Clash", "Tech Innovation", "Sports Relay"],
-			},
-			{
-				name: "Pixel Pioneers",
-				captain: "Ira Shah",
-				participants: 6,
-				points: 96,
-				events: ["Art Exhibition", "Tech Innovation"],
-			},
-			{
-				name: "Velocity",
-				captain: "Rohan Patil",
-				participants: 10,
-				points: 84,
-				events: ["Deadly Yorker", "Sports Relay"],
-			},
-			{
-				name: "The Strategists",
-				captain: "Meera Joshi",
-				participants: 5,
-				points: 61,
-				events: ["Business Hunt"],
-			},
-		],
+const mockTransactions: PointTransaction[] = [
+	{
+		id: "mock-1",
+		event: "Code Clash",
+		note: "Participation points awarded",
+		points: 50,
 	},
-	mit: {
-		name: "Maharashtra Institute of Technology",
-		code: "MIT",
-		city: "Pune, Maharashtra",
-		description:
-			"MIT arrives at URJA with an ambitious mix of technical talent and competitive energy.",
-		teams: [
-			{
-				name: "Binary Beasts",
-				captain: "Kabir More",
-				participants: 7,
-				points: 112,
-				events: ["Code Clash", "Tech Innovation"],
-			},
-			{
-				name: "Apex United",
-				captain: "Sana Khan",
-				participants: 9,
-				points: 73,
-				events: ["Deadly Yorker", "Sports Relay"],
-			},
-		],
+	{
+		id: "mock-2",
+		event: "Sports Relay",
+		note: "Late check-in deduction",
+		points: -10,
 	},
-};
+	{
+		id: "mock-3",
+		event: "Art Exhibition",
+		note: "Runner-up placement",
+		points: 75,
+	},
+];
 
-const eventDetails: Record<string, Event> = {
-	"Deadly Yorker": { category: "SPORTS", date: "OCT 26" },
-	"Code Clash": { category: "TECH", date: "OCT 26" },
-	"Art Exhibition": { category: "CULTURAL", date: "OCT 26" },
-	"Business Hunt": { category: "MANAGEMENT", date: "OCT 26" },
-	"Sports Relay": { category: "SPORTS", date: "OCT 27" },
-	"Tech Innovation": { category: "TECH", date: "OCT 27" },
-};
+function getText(data: Record<string, unknown>, keys: string[], fallback = "") {
+	const value = keys
+		.map((key) => data[key])
+		.find((item) => typeof item === "string");
+	return typeof value === "string" && value.trim() ? value : fallback;
+}
 
-export default async function CollegePage({
+function getNumber(data: Record<string, unknown>, keys: string[]) {
+	const value = keys
+		.map((key) => data[key])
+		.find((item) => typeof item === "number");
+	return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function formatTransactionDate(value: unknown) {
+	const timestamp = value as
+		| { toDate?: () => Date; seconds?: number }
+		| undefined;
+	const date =
+		timestamp?.toDate?.() ??
+		(typeof timestamp?.seconds === "number"
+			? new Date(timestamp.seconds * 1000)
+			: undefined);
+	return date && !Number.isNaN(date.getTime())
+		? date.toLocaleDateString("en-IN", {
+				day: "numeric",
+				month: "short",
+				year: "numeric",
+			})
+		: "Recent";
+}
+
+export default function CollegePage({
 	params,
 }: {
 	params: Promise<{ clcode: string }>;
 }) {
-	const { clcode } = await params;
-	const college = mockColleges[clcode.toLowerCase()] ?? mockColleges.bfc;
-	const participantCount = college.teams.reduce(
-		(total, team) => total + team.participants,
-		0,
-	);
-	const totalPoints = college.teams.reduce(
-		(total, team) => total + team.points,
-		0,
-	);
-	const eventCount = new Set(college.teams.flatMap((team) => team.events)).size;
+	const { clcode } = use(params);
+	const [college, setCollege] = useState<College | null>(null);
+	const [transactions, setTransactions] = useState<PointTransaction[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
+	useEffect(() => {
+		let active = true;
+		const collegeCode = clcode.trim().toUpperCase();
+		async function loadCollege() {
+			try {
+				const collegeSnapshot = await getDocs(
+					query(
+						collection(db, "CollegeCreds"),
+						where("ClCode", "==", collegeCode),
+					),
+				);
+				const collegeDoc = collegeSnapshot.docs[0];
+				if (!collegeDoc) throw new Error("College not found");
+				const data = collegeDoc.data() as Record<string, unknown>;
+				const eventValue = data.Events ?? data.events;
+				const eventList = Array.isArray(eventValue)
+					? eventValue.filter(
+							(event): event is string => typeof event === "string",
+						)
+					: [];
+				const nextCollege: College = {
+					code: getText(data, ["ClCode"], collegeCode),
+					name: getText(
+						data,
+						["CollegeName", "collegeName", "Name", "name"],
+						"College profile",
+					),
+					city: getText(
+						data,
+						["City", "city", "Location", "location"],
+						"Location to be announced",
+					),
+					description: getText(
+						data,
+						["Description", "description"],
+						"Representing their college at URJA.",
+					),
+					participants: getNumber(data, [
+						"Participants",
+						"participants",
+						"ParticipantCount",
+					]),
+					events: eventList,
+					prPoints: getNumber(data, [
+						"PRPoints",
+						"prPoints",
+						"Points",
+						"points",
+					]),
+				};
+				const transactionSnapshot = await getDocs(
+					query(
+						collection(db, "prPointTransactions"),
+						where("collegeCode", "==", collegeCode),
+					),
+				);
+				if (!active) return;
+				setCollege(nextCollege);
+				setTransactions(
+					transactionSnapshot.docs
+						.map((doc) => ({ id: doc.id, ...doc.data() }) as PointTransaction)
+						.sort((a, b) => {
+							const aSeconds =
+								(a.createdAt as { seconds?: number } | undefined)?.seconds ?? 0;
+							const bSeconds =
+								(b.createdAt as { seconds?: number } | undefined)?.seconds ?? 0;
+							return bSeconds - aSeconds;
+						}),
+				);
+				setError(null);
+			} catch (loadError) {
+				console.error("Failed to load college profile:", loadError);
+				if (active)
+					setError(
+						"We couldn't load this college profile. Please check the college code and try again.",
+					);
+			} finally {
+				if (active) setLoading(false);
+			}
+		}
+		loadCollege();
+		return () => {
+			active = false;
+		};
+	}, [clcode]);
+
+	if (loading)
+		return (
+			<>
+				<Navbar />
+				<main className="page-wrap college-dashboard">
+					<section className="section event-day-empty">
+						Loading college profile...
+					</section>
+				</main>
+				<Footer />
+			</>
+		);
+	if (error || !college)
+		return (
+			<>
+				<Navbar />
+				<main className="page-wrap college-dashboard">
+					<section className="section event-day-empty">
+						{error ?? "College not found."}
+					</section>
+				</main>
+				<Footer />
+			</>
+		);
+	const displayedTransactions = transactions.length
+		? transactions
+		: mockTransactions;
 	return (
 		<>
 			<div className="cosmic-bg" />
@@ -137,94 +225,86 @@ export default async function CollegePage({
 						View all URJA events <span aria-hidden="true">→</span>
 					</Link>
 				</section>
-
 				<section
 					className="college-stats section"
 					aria-label="College statistics">
 					<div className="college-stat">
-						<span className="stat-label">TEAMS</span>
-						<strong>{college.teams.length}</strong>
-						<span>competing squads</span>
-					</div>
-					<div className="college-stat">
 						<span className="stat-label">PARTICIPANTS</span>
-						<strong>{participantCount}</strong>
+						<strong>{college.participants}</strong>
 						<span>registered students</span>
 					</div>
 					<div className="college-stat">
 						<span className="stat-label">PR POINTS</span>
-						<strong>{totalPoints}</strong>
-						<span>earned so far</span>
+						<strong>{college.prPoints}</strong>
+						<span>current balance</span>
 					</div>
 					<div className="college-stat">
 						<span className="stat-label">EVENTS</span>
-						<strong>{eventCount}</strong>
+						<strong>{college.events.length}</strong>
 						<span>events entered</span>
 					</div>
+					<div className="college-stat">
+						<span className="stat-label">STATUS</span>
+						<strong>LIVE</strong>
+						<span>URJA 2026 delegate</span>
+					</div>
 				</section>
-
 				<section className="college-content section">
 					<div className="section-heading-row">
 						<div>
-							<p className="eyebrow">ON THE CIRCUIT</p>
-							<h2>Team performance</h2>
+							<p className="eyebrow">PR POINTS</p>
+							<h2>Transaction history</h2>
 						</div>
 						<span className="live-pill">
-							<span /> LIVE STANDINGS
+							<span /> LIVE BALANCE
 						</span>
 					</div>
-					<div className="team-list">
-						{college.teams
-							.sort((a, b) => b.points - a.points)
-							.map((team, index) => (
-								<article className="team-row" key={team.name}>
-									<div className="team-rank">
-										{String(index + 1).padStart(2, "0")}
-									</div>
-									<div className="team-main">
-										<h3>{team.name}</h3>
-										<p>
-											Captain: {team.captain} · {team.participants} participants
-										</p>
-										<div className="team-events">
-											{team.events.map((event) => (
-												<span key={event}>{event}</span>
-											))}
-										</div>
-									</div>
-									<div className="team-points">
-										<strong>{team.points}</strong>
-										<span>PR POINTS</span>
-									</div>
-								</article>
-							))}
-					</div>
-				</section>
-
-				<section className="college-events section">
-					<div className="section-heading-row">
-						<div>
-							<p className="eyebrow">EVENT MAP</p>
-							<h2>Where they compete</h2>
-						</div>
-						<Link href="/events" className="text-link">
-							Browse schedule →
-						</Link>
-					</div>
-					<div className="college-event-grid">
-						{Array.from(
-							new Set(college.teams.flatMap((team) => team.events)),
-						).map((event) => (
-							<div className="college-event-card" key={event}>
-								<div>
-									<span>{eventDetails[event].category}</span>
-									<h3>{event}</h3>
+					<div className="transaction-list">
+						{displayedTransactions.map((transaction) => (
+							<article className="transaction-row" key={transaction.id}>
+								<div
+									className={`transaction-sign ${transaction.points >= 0 ? "is-credit" : "is-debit"}`}>
+									{transaction.points >= 0 ? "+" : "−"}
 								</div>
-								<time>{eventDetails[event].date}</time>
-							</div>
+								<div className="transaction-main">
+									<h3>{transaction.event}</h3>
+									<p>{transaction.note}</p>
+									<time>{formatTransactionDate(transaction.createdAt)}</time>
+								</div>
+								<strong
+									className={
+										transaction.points >= 0 ? "is-credit" : "is-debit"
+									}>
+									{transaction.points >= 0 ? "+" : ""}
+									{transaction.points} <span>PR POINTS</span>
+								</strong>
+							</article>
 						))}
 					</div>
 				</section>
+				{college.events.length > 0 && (
+					<section className="college-events section">
+						<div className="section-heading-row">
+							<div>
+								<p className="eyebrow">EVENT MAP</p>
+								<h2>Where they compete</h2>
+							</div>
+							<Link href="/events" className="text-link">
+								Browse schedule →
+							</Link>
+						</div>
+						<div className="college-event-grid">
+							{college.events.map((event) => (
+								<div className="college-event-card" key={event}>
+									<div>
+										<span>URJA EVENT</span>
+										<h3>{event}</h3>
+									</div>
+								</div>
+							))}
+						</div>
+					</section>
+				)}
 			</main>
 			<Footer />
 		</>

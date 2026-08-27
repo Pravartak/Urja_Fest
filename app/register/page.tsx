@@ -5,7 +5,13 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { formatEventDateTime } from "../events/page";
 import { db } from "@/lib/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import {
+	addDoc,
+	collection,
+	doc,
+	getDocs,
+	serverTimestamp,
+} from "firebase/firestore";
 
 type Event = {
 	Id: number | string;
@@ -20,6 +26,13 @@ type FirestoreEvent = Partial<Omit<Event, "Date_and_Time">> & {
 	Date?: unknown;
 };
 
+type College = {
+	id: string;
+	ClCode?: string;
+	CollegeName?: string;
+	Name?: string;
+};
+
 // The display labels include spaces, but the Firestore collections are named
 // Day1 through Day4. Keep the two values separate so changing the UI label
 // cannot accidentally change the collection being queried.
@@ -32,8 +45,11 @@ const eventDays = [
 
 export default function Register() {
 	const [eventsByDay, setEventsByDay] = useState<Record<string, Event[]>>({});
+	const [colleges, setColleges] = useState<College[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [submitError, setSubmitError] = useState<string | null>(null);
 
 	const [formData, setFormData] = useState({
 		fullName: "",
@@ -41,6 +57,7 @@ export default function Register() {
 		emailId: "",
 		selectedDay: "",
 		selectedEvent: "",
+		selectedCollege: "",
 		isSoloPlayer: false,
 		teamMember2: "",
 		teamMember3: "",
@@ -55,13 +72,18 @@ export default function Register() {
 
 		async function fetchEvents() {
 			try {
-				const snapshots = await Promise.all(
-					eventDays.map(({ collectionName }) =>
+				const [collegeSnapshot, ...eventSnapshots] = await Promise.all([
+					getDocs(collection(db, "CollegeCreds")),
+					...eventDays.map(({ collectionName }) =>
 						getDocs(collection(db, collectionName)),
 					),
-				);
+				]);
+				const nextColleges = collegeSnapshot.docs.map((collegeDoc) => ({
+					id: collegeDoc.id,
+					...collegeDoc.data(),
+				})) as College[];
 				const nextEvents = Object.fromEntries(
-					snapshots.map((snapshot, index) => [
+					eventSnapshots.map((snapshot, index) => [
 						eventDays[index].label,
 						snapshot.docs.map((eventDoc) => {
 							const data = eventDoc.data() as FirestoreEvent;
@@ -79,6 +101,7 @@ export default function Register() {
 				);
 
 				if (active) {
+					setColleges(nextColleges);
 					setEventsByDay(nextEvents);
 					setError(null);
 				}
@@ -128,11 +151,50 @@ export default function Register() {
 			}));
 	};
 
-	const handleSubmit = (e: any) => {
+	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		setSubmitted(true);
-		console.log("Form submitted:", formData);
-		// Simulate API call or processing
+		const selectedCollege = colleges.find(
+			(college) => college.id === formData.selectedCollege,
+		);
+		if (!selectedCollege) {
+			setSubmitError("Please select the college you will represent.");
+			return;
+		}
+
+		setIsSubmitting(true);
+		setSubmitError(null);
+		try {
+			await addDoc(
+				collection(doc(db, "CollegeCreds", selectedCollege.id), "Requests"),
+				{
+					fullName: formData.fullName,
+					contactNumber: formData.contactNumber,
+					emailId: formData.emailId,
+					collegeId: selectedCollege.id,
+					collegeCode: selectedCollege.ClCode ?? null,
+					collegeName:
+						selectedCollege.CollegeName ?? selectedCollege.Name ?? "",
+					selectedDay: formData.selectedDay,
+					selectedEvent: formData.selectedEvent,
+					isSoloPlayer: formData.isSoloPlayer,
+					teamMember2: formData.teamMember2,
+					teamMember3: formData.teamMember3,
+					teamMember4: formData.teamMember4,
+					paymentProofFileName: formData.paymentProof?.name ?? null,
+					createdAt: serverTimestamp(),
+				},
+			);
+			setSubmitted(true);
+		} catch (submissionError) {
+			console.error("Failed to submit registration:", submissionError);
+			setSubmitError(
+				"Registration could not be submitted. Please check your connection and try again.",
+			);
+			return;
+		} finally {
+			setIsSubmitting(false);
+		}
+
 		setTimeout(() => {
 			setFormData({
 				fullName: "",
@@ -140,6 +202,7 @@ export default function Register() {
 				emailId: "",
 				selectedDay: "",
 				selectedEvent: "",
+				selectedCollege: "",
 				isSoloPlayer: false,
 				teamMember2: "",
 				teamMember3: "",
@@ -244,7 +307,7 @@ export default function Register() {
 									</label>
 									<input
 										type="email"
-										name="email"
+										name="emailId"
 										value={formData.emailId}
 										onChange={handleChange}
 										required
@@ -260,6 +323,51 @@ export default function Register() {
 											fontFamily: "inherit",
 										}}
 									/>
+								</div>
+
+								<div style={{ marginBottom: "24px" }}>
+									<label
+										style={{
+											display: "block",
+											marginBottom: "10px",
+											color: "var(--text-dim)",
+											fontSize: "0.8rem",
+											letterSpacing: "1.5px",
+										}}>
+										COLLEGE YOU WILL REPRESENT
+									</label>
+									<select
+										name="selectedCollege"
+										value={formData.selectedCollege}
+										onChange={handleChange}
+										required
+										disabled={loading || colleges.length === 0}
+										style={{
+											width: "100%",
+											borderRadius: "10px",
+											color: "var(--text)",
+											padding: "14px 16px",
+											border: "1px solid var(--border)",
+											background: "var(--input-bg)",
+											fontSize: "0.95rem",
+											fontFamily: "inherit",
+										}}>
+										<option value="">
+											{loading
+												? "Loading colleges..."
+												: error
+													? "Colleges unavailable"
+													: colleges.length === 0
+														? "No colleges available"
+														: "Select your college"}
+										</option>
+										{colleges.map((college) => (
+											<option key={college.id} value={college.id}>
+												{college.CollegeName ?? college.Name ?? college.ClCode ?? college.id}
+												{college.ClCode ? ` (${college.ClCode})` : ""}
+											</option>
+										))}
+									</select>
 								</div>
 
 								<div style={{ marginBottom: "24px" }}>
@@ -540,11 +648,18 @@ export default function Register() {
 									/>
 								</div>
 
+								{submitError && (
+									<p style={{ color: "#ff8f8f", marginBottom: "16px" }} role="alert">
+										{submitError}
+									</p>
+								)}
+
 								<button
 									type="submit"
 									className="btn btn-gold"
+									disabled={isSubmitting || loading || colleges.length === 0}
 									style={{ width: "100%", justifyContent: "center" }}>
-									Register Now
+									{isSubmitting ? "Submitting..." : "Register Now"}
 								</button>
 
 								<p
