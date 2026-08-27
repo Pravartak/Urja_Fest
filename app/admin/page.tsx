@@ -29,6 +29,23 @@ type PendingRegistration = {
 	paymentProof: string;
 };
 
+type AdminEvent = {
+	id: string;
+	name: string;
+	day: string;
+};
+
+type PointAward = {
+	label: string;
+	points: number;
+};
+
+const pointAwards: PointAward[] = [
+	{ label: "First Place", points: 700 },
+	{ label: "Second Place", points: 300 },
+	{ label: "Third Place", points: 250 },
+];
+
 const mockRegistrations = [
 	{
 		id: 1,
@@ -63,9 +80,9 @@ const mockRegistrations = [
 const eventDayCollections = ["Day1", "Day2", "Day3", "Day4"] as const;
 
 export default function Admin() {
-	const [registrations, setRegistrations] = useState([]);
-	const [events, setEvents] = useState([]);
+	const [events, setEvents] = useState<AdminEvent[]>([]);
 	const [colleges, setColleges] = useState<CollegeCredential[]>([]);
+	const [allRegistrations, setAllRegistrations] = useState<PendingRegistration[]>([]);
 	const [pendingRegistrations, setPendingRegistrations] = useState<
 		PendingRegistration[]
 	>([]);
@@ -73,9 +90,9 @@ export default function Admin() {
 		string | null
 	>(null);
 	const [selectedCollegeId, setSelectedCollegeId] = useState("");
-	const [pointAmount, setPointAmount] = useState("");
 	const [pointEvent, setPointEvent] = useState("");
-	const [pointNote, setPointNote] = useState("");
+	const [pointTeamLeader, setPointTeamLeader] = useState("");
+	const [pointPlace, setPointPlace] = useState("");
 	const [pointStatus, setPointStatus] = useState("");
 	const [isSavingPoints, setIsSavingPoints] = useState(false);
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -93,14 +110,18 @@ export default function Admin() {
 					),
 					getDocs(collection(db, "CollegeCreds")),
 				]);
-				setEvents(
-					eventDaySnapshots.flatMap((snapshot) =>
-						snapshot.docs.map((eventDoc) => ({
-							id: eventDoc.id,
-							...eventDoc.data(),
-						})),
-					),
-				);
+					setEvents(
+						eventDaySnapshots.flatMap((snapshot, dayIndex) =>
+							snapshot.docs.map((eventDoc) => {
+								const data = eventDoc.data();
+								return {
+									id: eventDoc.id,
+									name: String(data.Name ?? data.name ?? "Untitled event"),
+									day: eventDayCollections[dayIndex],
+								};
+							}),
+						),
+					);
 				setColleges(
 					collegesSnapshot.docs.map(
 						(collegeDoc) =>
@@ -116,12 +137,7 @@ export default function Admin() {
 						const requestsSnapshot = await getDocs(
 							collection(doc(db, "CollegeCreds", collegeDoc.id), "Requests"),
 						);
-						return requestsSnapshot.docs
-							.filter((requestDoc) => {
-								const status = requestDoc.data().status;
-								return !status || status === "pending";
-							})
-							.map((requestDoc) => {
+							return requestsSnapshot.docs.map((requestDoc) => {
 								const request = requestDoc.data();
 								return {
 									id: requestDoc.id,
@@ -141,7 +157,9 @@ export default function Admin() {
 							}) as PendingRegistration[];
 					}),
 				);
-				setPendingRegistrations(requestGroups.flat());
+					const flattenedRegistrations = requestGroups.flat();
+					setAllRegistrations(flattenedRegistrations);
+					setPendingRegistrations(flattenedRegistrations);
 			} catch (fetchError) {
 				console.error("Failed to load admin data:", fetchError);
 			}
@@ -203,14 +221,19 @@ export default function Admin() {
 		}
 	};
 
+	const selectedAward = pointAwards.find((award) => award.label === pointPlace);
+	const selectedEvent = events.find((event) => `${event.day}:${event.id}` === pointEvent);
+	const teamOptions = allRegistrations.filter(
+		(registration) =>
+			registration.collegeId === selectedCollegeId &&
+			registration.eventName === selectedEvent?.name,
+	);
+
 	const handlePointsChange = async (event: FormEvent) => {
 		event.preventDefault();
-		const amount = Number(pointAmount);
-		const selectedCollege = colleges.find(
-			(college) => college.id === selectedCollegeId,
-		);
-		if (!selectedCollege || !Number.isFinite(amount) || amount === 0) {
-			setPointStatus("Select a college and enter a non-zero point amount.");
+		const selectedCollege = colleges.find((college) => college.id === selectedCollegeId);
+		if (!selectedCollege || !selectedEvent || !pointTeamLeader || !selectedAward) {
+			setPointStatus("Select a college, event, team leader, and place.");
 			return;
 		}
 		setIsSavingPoints(true);
@@ -219,34 +242,29 @@ export default function Admin() {
 			const collegeRef = doc(db, "CollegeCreds", selectedCollege.id);
 			await runTransaction(db, async (transaction) => {
 				const current = await transaction.get(collegeRef);
-				if (!current.exists())
-					throw new Error("College record no longer exists.");
+				if (!current.exists()) throw new Error("College record no longer exists.");
 				const currentData = current.data();
-				const currentPoints = Number(
-					currentData.PRPoints ??
-						currentData.prPoints ??
-						currentData.Points ??
-						currentData.points ??
-						0,
-				);
-				transaction.update(collegeRef, { PRPoints: currentPoints + amount });
+				const currentPoints = Number(currentData.PRPoints ?? currentData.prPoints ?? currentData.Points ?? currentData.points ?? 0);
+				transaction.update(collegeRef, { PRPoints: currentPoints + selectedAward.points });
 			});
 			await addDoc(collection(db, "prPointTransactions"), {
+				collegeId: selectedCollege.id,
 				collegeCode: selectedCollege.ClCode.toUpperCase(),
-				points: amount,
-				event: pointEvent.trim() || "Admin adjustment",
-				note: pointNote.trim() || "PR Points updated by admin",
+				collegeName: selectedCollege.CollegeName ?? selectedCollege.Name ?? selectedCollege.ClCode,
+				event: selectedEvent.name,
+				teamLeader: pointTeamLeader,
+				place: selectedAward.label,
+				points: selectedAward.points,
 				createdAt: serverTimestamp(),
 			});
-			setPointAmount("");
+			setSelectedCollegeId("");
 			setPointEvent("");
-			setPointNote("");
-			setPointStatus("PR Points updated and transaction recorded.");
+			setPointTeamLeader("");
+			setPointPlace("");
+			setPointStatus(`${selectedAward.points} PR Points added for ${selectedAward.label}.`);
 		} catch (saveError) {
 			console.error("Failed to update PR Points:", saveError);
-			setPointStatus(
-				"Could not update PR Points. Check Firestore permissions and try again.",
-			);
+			setPointStatus("Could not update PR Points. Check Firestore permissions and try again.");
 		} finally {
 			setIsSavingPoints(false);
 		}
@@ -464,38 +482,36 @@ export default function Admin() {
 								<form
 									className="admin-points-form"
 									onSubmit={handlePointsChange}>
-									<select
-										value={selectedCollegeId}
-										onChange={(event) =>
-											setSelectedCollegeId(event.target.value)
-										}
-										required>
-										<option value="">Select college</option>
-										{colleges.map((college) => (
-											<option key={college.id} value={college.id}>
-												{college.CollegeName ?? college.Name ?? college.ClCode}{" "}
-												({college.ClCode})
-											</option>
-										))}
-									</select>
-									<input
-										type="number"
-										value={pointAmount}
-										onChange={(event) => setPointAmount(event.target.value)}
-										placeholder="Points, e.g. 50 or -10"
-										required
-									/>
-									<input
-										value={pointEvent}
-										onChange={(event) => setPointEvent(event.target.value)}
-										placeholder="Event name (optional)"
-									/>
-									<input
-										value={pointNote}
-										onChange={(event) => setPointNote(event.target.value)}
-										placeholder="Reason / note (optional)"
-									/>
-									<button
+										<select
+											value={selectedCollegeId}
+											onChange={(event) => {
+												setSelectedCollegeId(event.target.value);
+												setPointEvent("");
+												setPointTeamLeader("");
+												setPointPlace("");
+											}}
+											required>
+											<option value="">College</option>
+											{colleges.map((college) => (
+												<option key={college.id} value={college.id}>
+													{college.CollegeName ?? college.Name ?? college.ClCode} ({college.ClCode})
+												</option>
+											))}
+										</select>
+										<select value={pointEvent} onChange={(event) => { setPointEvent(event.target.value); setPointTeamLeader(""); setPointPlace(""); }} disabled={!selectedCollegeId} required>
+											<option value="">Event</option>
+											{events.map((event) => <option key={`${event.day}-${event.id}`} value={event.id}>{event.name} ({event.day})</option>)}
+										</select>
+										<select value={pointTeamLeader} onChange={(event) => setPointTeamLeader(event.target.value)} disabled={!pointEvent || teamOptions.length === 0} required>
+											<option value="">Team Leader</option>
+											{teamOptions.map((team) => <option key={team.id} value={team.teamLeaderName}>{team.teamLeaderName}</option>)}
+										</select>
+										<select value={pointPlace} onChange={(event) => setPointPlace(event.target.value)} disabled={!pointTeamLeader} required>
+											<option value="">Place</option>
+											{pointAwards.map((award) => <option key={award.label} value={award.label}>{award.label} — {award.points} points</option>)}
+										</select>
+										{selectedAward && <div className="admin-award-summary"><span>{selectedAward.label}</span><strong>+{selectedAward.points} PR</strong></div>}
+										<button
 										type="submit"
 										className="btn btn-purple-gradient"
 										disabled={isSavingPoints}>
