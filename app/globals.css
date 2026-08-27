@@ -1044,6 +1044,17 @@ img {
 .transaction-sign.is-credit { background: rgba(111, 227, 163, 0.12); }
 .transaction-sign.is-debit { background: rgba(255, 138, 138, 0.12); }
 
+.admin-page {
+  min-height: 100vh;
+  padding-top: 80px;
+}
+
+.admin-dashboard-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 48px 24px 72px;
+}
+
 .admin-points-panel {
   position: relative;
   overflow: hidden;
