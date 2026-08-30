@@ -39,7 +39,6 @@ type College = {
 const eventDays = [
 	{ label: "Day 1", collectionName: "Day1" },
 	{ label: "Day 2", collectionName: "Day2" },
-	{ label: "Day 3", collectionName: "Day3" },
 	{ label: "Day 4", collectionName: "Day4" },
 ] as const;
 
@@ -47,12 +46,12 @@ export default function Register() {
 	const [colleges, setColleges] = useState<College[]>([]);
 	const [day1Events, setDay1Events] = useState<Event[]>([]);
 	const [day2Events, setDay2Events] = useState<Event[]>([]);
-	const [day3Events, setDay3Events] = useState<Event[]>([]);
 	const [day4Events, setDay4Events] = useState<Event[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
+	const [showTeamMember5, setShowTeamMember5] = useState(false);
 
 	const [formData, setFormData] = useState({
 		fullName: "",
@@ -66,6 +65,7 @@ export default function Register() {
 		teamMember2: "",
 		teamMember3: "",
 		teamMember4: "",
+		teamMember5: "",
 		paymentProof: null as File | null,
 	});
 
@@ -76,19 +76,13 @@ export default function Register() {
 
 		const fetchRegistrationData = async () => {
 			try {
-				const [
-					collegeSnapshot,
-					day1Snapshot,
-					day2Snapshot,
-					day3Snapshot,
-					day4Snapshot,
-				] = await Promise.all([
-					getDocs(collection(db, "CollegeCreds")),
-					getDocs(collection(db, "Day1")),
-					getDocs(collection(db, "Day2")),
-					getDocs(collection(db, "Day3")),
-					getDocs(collection(db, "Day4")),
-				]);
+				const [collegeSnapshot, day1Snapshot, day2Snapshot, day4Snapshot] =
+					await Promise.all([
+						getDocs(collection(db, "CollegeCreds")),
+						getDocs(collection(db, "Day1")),
+						getDocs(collection(db, "Day2")),
+						getDocs(collection(db, "Day4")),
+					]);
 
 				const mapEvents = (snapshot: typeof day1Snapshot): Event[] =>
 					snapshot.docs.map((eventDoc) => {
@@ -114,7 +108,6 @@ export default function Register() {
 				setColleges(nextColleges);
 				setDay1Events(mapEvents(day1Snapshot));
 				setDay2Events(mapEvents(day2Snapshot));
-				setDay3Events(mapEvents(day3Snapshot));
 				setDay4Events(mapEvents(day4Snapshot));
 				setError(null);
 			} catch (fetchError) {
@@ -143,8 +136,6 @@ export default function Register() {
 				return day1Events;
 			case "Day 2":
 				return day2Events;
-			case "Day 3":
-				return day3Events;
 			case "Day 4":
 				return day4Events;
 			default:
@@ -156,6 +147,20 @@ export default function Register() {
 		if (e.target.files && e.target.files[0]) {
 			setFormData((prev) => ({ ...prev, paymentProof: e.target.files![0] }));
 		}
+	};
+
+	const getQRCodeImage = (): string => {
+		const events = getEventsForDay(formData.selectedDay);
+		const selectedEvent = events.find(
+			(e) => String(e.Id) === formData.selectedEvent,
+		);
+
+		// Return different QR code based on selected event
+		if (selectedEvent?.Name === "HackHive Hackathon") {
+			return "/Hackathon_QR.jpeg"; // HackHive QR code
+		}
+
+		return "/Other_QR.jpeg"; // Default QR code for other events
 	};
 
 	const handleChange = (
@@ -180,6 +185,21 @@ export default function Register() {
 				? { selectedEvent: "", selectedEventId: "" }
 				: {}),
 		}));
+
+		// Show teamMember5 input only if selected event is "HackHive Hackathon"
+		if (name === "selectedEvent") {
+			const event = getEventsForDay(formData.selectedDay).find(
+				(e) => String(e.Id) === value,
+			);
+			if (event?.Name === "HackHive Hackathon") {
+				setShowTeamMember5(true);
+			} else {
+				setShowTeamMember5(false);
+			}
+		} else if (name === "selectedDay") {
+			// Reset teamMember5 visibility when day changes
+			setShowTeamMember5(false);
+		}
 	};
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -220,6 +240,12 @@ export default function Register() {
 				storage,
 				`payment-proofs/${selectedCollege.id}/${requestRef.id}-${safeFileName}`,
 			);
+			console.log("Payment proof:", {
+				name: formData.paymentProof.name,
+				type: formData.paymentProof.type,
+				size: formData.paymentProof.size,
+				sizeMB: (formData.paymentProof.size / (1024 * 1024)).toFixed(2),
+			});
 			const uploadResult = await uploadBytes(
 				paymentProofRef,
 				formData.paymentProof,
@@ -242,6 +268,7 @@ export default function Register() {
 				teamMember2: registrationData.teamMember2,
 				teamMember3: registrationData.teamMember3,
 				teamMember4: registrationData.teamMember4,
+				teamMember5: registrationData.teamMember5,
 				paymentProofUrl,
 				paymentProofPath: uploadResult.ref.fullPath,
 				paymentProofName: safeFileName,
@@ -267,14 +294,23 @@ export default function Register() {
 					teamMember2: "",
 					teamMember3: "",
 					teamMember4: "",
+					teamMember5: "",
 					paymentProof: null,
 				});
 				setSubmitted(false);
 			}, 3000);
 		} catch (error) {
-			console.error("Error submitting registration: ", error);
+			console.error("🔥 REGISTRATION FAILED:", error);
+
+			if (error instanceof Error) {
+				console.error("Message:", error.message);
+				console.error("Name:", error.name);
+			}
+
 			setSubmitError(
-				"Registration could not be submitted. Please check the payment proof image and try again.",
+				error instanceof Error
+					? error.message
+					: "Registration could not be submitted.",
 			);
 		} finally {
 			setSubmitting(false);
@@ -661,34 +697,66 @@ export default function Register() {
 												}}
 											/>
 										</div>
+										{showTeamMember5 && (
+											<div style={{ marginBottom: "24px" }}>
+												<label
+													style={{
+														display: "block",
+														marginBottom: "10px",
+														color: "var(--text-dim)",
+														fontSize: "0.8rem",
+														letterSpacing: "1.5px",
+													}}>
+													TEAM MEMBER 5 FULL NAME
+												</label>
+												<input
+													type="text"
+													name="teamMember5"
+													value={formData.teamMember5}
+													onChange={handleChange}
+													placeholder="Full name of team member 5"
+													style={{
+														width: "100%",
+														borderRadius: "10px",
+														color: "var(--text)",
+														padding: "14px 16px",
+														border: "1px solid var(--border)",
+														background: "var(--input-bg)",
+														fontSize: "0.95rem",
+														fontFamily: "inherit",
+													}}
+												/>
+											</div>
+										)}
 									</>
 								)}
 
-								<div style={{ marginBottom: "24px", textAlign: "center" }}>
-									<label
-										style={{
-											display: "block",
-											marginBottom: "10px",
-											color: "var(--text-dim)",
-											fontSize: "0.8rem",
-											letterSpacing: "1.5px",
-										}}>
-										PAYMENT QR CODE
-									</label>
-									{/* Placeholder for QR Code image */}
-									<img
-										src="/assets/img/cab-logo.png" // Replace with your actual QR code image path
-										alt="Payment QR Code"
-										style={{
-											maxWidth: "200px",
-											height: "auto",
-											borderRadius: "10px",
-											border: "1px solid var(--border)",
-											margin: "0 auto",
-											display: "block",
-										}}
-									/>
-								</div>
+{formData.selectedEvent && (
+						<div style={{ marginBottom: "24px", textAlign: "center" }}>
+							<label
+								style={{
+									display: "block",
+									marginBottom: "10px",
+									color: "var(--text-dim)",
+									fontSize: "0.8rem",
+									letterSpacing: "1.5px",
+								}}>
+								PAYMENT QR CODE
+							</label>
+							<img
+								src={getQRCodeImage()}
+								alt="Payment QR Code"
+								style={{
+									maxWidth: "200px",
+									height: "auto",
+									borderRadius: "10px",
+									border: "1px solid var(--border)",
+									margin: "0 auto",
+									display: "block",
+								}}
+							/>
+						</div>
+					)}
 
 								<div style={{ marginBottom: "32px" }}>
 									<label
