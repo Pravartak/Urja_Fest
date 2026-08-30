@@ -4,14 +4,19 @@ import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { formatEventDateTime } from "../events/page";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import {
-	addDoc,
 	collection,
 	doc,
 	getDocs,
 	serverTimestamp,
+	writeBatch,
 } from "firebase/firestore";
+import {
+	getDownloadURL,
+	ref as storageRef,
+	uploadBytes,
+} from "firebase/storage";
 
 type Event = {
 	Id: number | string;
@@ -21,21 +26,16 @@ type Event = {
 	Date_and_Time: string;
 };
 
-type FirestoreEvent = Partial<Omit<Event, "Date_and_Time">> & {
-	Date_and_Time?: unknown;
-	Date?: unknown;
-};
-
 type College = {
 	id: string;
-	ClCode?: string;
-	CollegeName?: string;
-	Name?: string;
+	ClCode: string;
+	Name: string;
+	PRPoints: number;
+	Password: string;
+	Teams: number;
 };
 
-// The display labels include spaces, but the Firestore collections are named
-// Day1 through Day4. Keep the two values separate so changing the UI label
-// cannot accidentally change the collection being queried.
+// Firestore is used here only as a read-only source for colleges and events.
 const eventDays = [
 	{ label: "Day 1", collectionName: "Day1" },
 	{ label: "Day 2", collectionName: "Day2" },
@@ -44,12 +44,15 @@ const eventDays = [
 ] as const;
 
 export default function Register() {
-	const [eventsByDay, setEventsByDay] = useState<Record<string, Event[]>>({});
 	const [colleges, setColleges] = useState<College[]>([]);
+	const [day1Events, setDay1Events] = useState<Event[]>([]);
+	const [day2Events, setDay2Events] = useState<Event[]>([]);
+	const [day3Events, setDay3Events] = useState<Event[]>([]);
+	const [day4Events, setDay4Events] = useState<Event[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
+	const [submitting, setSubmitting] = useState(false);
 
 	const [formData, setFormData] = useState({
 		fullName: "",
@@ -57,7 +60,8 @@ export default function Register() {
 		emailId: "",
 		selectedDay: "",
 		selectedEvent: "",
-		selectedCollege: "",
+		selectedEventId: "",
+		collegeId: "",
 		isSoloPlayer: false,
 		teamMember2: "",
 		teamMember3: "",
@@ -70,58 +74,83 @@ export default function Register() {
 	useEffect(() => {
 		let active = true;
 
-		async function fetchEvents() {
+		const fetchRegistrationData = async () => {
 			try {
-				const [collegeSnapshot, ...eventSnapshots] = await Promise.all([
+				const [
+					collegeSnapshot,
+					day1Snapshot,
+					day2Snapshot,
+					day3Snapshot,
+					day4Snapshot,
+				] = await Promise.all([
 					getDocs(collection(db, "CollegeCreds")),
-					...eventDays.map(({ collectionName }) =>
-						getDocs(collection(db, collectionName)),
-					),
+					getDocs(collection(db, "Day1")),
+					getDocs(collection(db, "Day2")),
+					getDocs(collection(db, "Day3")),
+					getDocs(collection(db, "Day4")),
 				]);
+
+				const mapEvents = (snapshot: typeof day1Snapshot): Event[] =>
+					snapshot.docs.map((eventDoc) => {
+						const data = eventDoc.data();
+						return {
+							Id: data.Id ?? eventDoc.id,
+							Name: data.Name ?? "Untitled event",
+							Description: data.Description,
+							Venue: data.Venue ?? "Venue to be announced",
+							Date_and_Time: formatEventDateTime(
+								data.Date_and_Time ?? data.Date,
+							),
+						};
+					});
+
 				const nextColleges = collegeSnapshot.docs.map((collegeDoc) => ({
 					id: collegeDoc.id,
 					...collegeDoc.data(),
 				})) as College[];
-				const nextEvents = Object.fromEntries(
-					eventSnapshots.map((snapshot, index) => [
-						eventDays[index].label,
-						snapshot.docs.map((eventDoc) => {
-							const data = eventDoc.data() as FirestoreEvent;
-							return {
-								Id: data.Id ?? eventDoc.id,
-								Name: data.Name ?? "Untitled event",
-								Description: data.Description,
-								Venue: data.Venue ?? "Venue to be announced",
-								Date_and_Time: formatEventDateTime(
-									data.Date_and_Time ?? data.Date,
-								),
-							} satisfies Event;
-						}),
-					]),
-				);
+
+				if (!active) return;
+
+				setColleges(nextColleges);
+				setDay1Events(mapEvents(day1Snapshot));
+				setDay2Events(mapEvents(day2Snapshot));
+				setDay3Events(mapEvents(day3Snapshot));
+				setDay4Events(mapEvents(day4Snapshot));
+				setError(null);
+			} catch (fetchError) {
+				console.error("Failed to fetch registration data: ", fetchError);
 
 				if (active) {
-					setColleges(nextColleges);
-					setEventsByDay(nextEvents);
-					setError(null);
+					setError(
+						"Registration data is currently unavailable. Please try again later.",
+					);
 				}
-			} catch (fetchError) {
-				console.error(
-					"[v0] Failed to fetch events from Firestore:",
-					fetchError,
-				);
-				if (active)
-					setError("Events are currently unavailable. Please try again later.");
 			} finally {
 				if (active) setLoading(false);
 			}
-		}
+		};
 
-		fetchEvents();
+		fetchRegistrationData();
+
 		return () => {
 			active = false;
 		};
 	}, []);
+
+	const getEventsForDay = (day: string): Event[] => {
+		switch (day) {
+			case "Day 1":
+				return day1Events;
+			case "Day 2":
+				return day2Events;
+			case "Day 3":
+				return day3Events;
+			case "Day 4":
+				return day4Events;
+			default:
+				return [];
+		}
+	};
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (e.target.files && e.target.files[0]) {
@@ -143,74 +172,113 @@ export default function Register() {
 			return;
 		}
 
-			const { name, value } = target;
-			setFormData((prev) => ({
-				...prev,
-				[name]: value,
-				...(name === "selectedDay" ? { selectedEvent: "" } : {}),
-			}));
+		const { name, value } = target;
+		setFormData((prev) => ({
+			...prev,
+			[name]: value,
+			...(name === "selectedDay"
+				? { selectedEvent: "", selectedEventId: "" }
+				: {}),
+		}));
 	};
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
+
+		if (!formData.paymentProof) {
+			setSubmitError("Please upload your payment proof image.");
+			return;
+		}
+
 		const selectedCollege = colleges.find(
-			(college) => college.id === formData.selectedCollege,
+			(college) => college.id === formData.collegeId,
 		);
+
 		if (!selectedCollege) {
 			setSubmitError("Please select the college you will represent.");
 			return;
 		}
 
-		setIsSubmitting(true);
-		setSubmitError(null);
-		try {
-			await addDoc(
-				collection(doc(db, "CollegeCreds", selectedCollege.id), "Requests"),
-				{
-					fullName: formData.fullName,
-					contactNumber: formData.contactNumber,
-					emailId: formData.emailId,
-					collegeId: selectedCollege.id,
-					collegeCode: selectedCollege.ClCode ?? null,
-					collegeName:
-						selectedCollege.CollegeName ?? selectedCollege.Name ?? "",
-					selectedDay: formData.selectedDay,
-					selectedEvent: formData.selectedEvent,
-					isSoloPlayer: formData.isSoloPlayer,
-					teamMember2: formData.teamMember2,
-					teamMember3: formData.teamMember3,
-					teamMember4: formData.teamMember4,
-					paymentProofFileName: formData.paymentProof?.name ?? null,
-					createdAt: serverTimestamp(),
-				},
-			);
-			setSubmitted(true);
-		} catch (submissionError) {
-			console.error("Failed to submit registration:", submissionError);
-			setSubmitError(
-				"Registration could not be submitted. Please check your connection and try again.",
-			);
+		const selectedEvent = getEventsForDay(formData.selectedDay).find(
+			(event) => String(event.Id) === formData.selectedEvent,
+		);
+
+		if (!selectedEvent) {
+			setSubmitError("Please select a valid event.");
 			return;
-		} finally {
-			setIsSubmitting(false);
 		}
 
-		setTimeout(() => {
-			setFormData({
-				fullName: "",
-				contactNumber: "",
-				emailId: "",
-				selectedDay: "",
-				selectedEvent: "",
-				selectedCollege: "",
-				isSoloPlayer: false,
-				teamMember2: "",
-				teamMember3: "",
-				teamMember4: "",
-				paymentProof: null,
+		setSubmitError(null);
+		setSubmitting(true);
+
+		try {
+			const requestRef = doc(
+				collection(db, "CollegeCreds", selectedCollege.id, "Requests"),
+			);
+			const safeFileName = formData.paymentProof.name.replace(/\s+/g, "_");
+			const paymentProofRef = storageRef(
+				storage,
+				`payment-proofs/${selectedCollege.id}/${requestRef.id}-${safeFileName}`,
+			);
+			const uploadResult = await uploadBytes(
+				paymentProofRef,
+				formData.paymentProof,
+			);
+			const paymentProofUrl = await getDownloadURL(uploadResult.ref);
+			const batch = writeBatch(db);
+			const { paymentProof, ...registrationData } = formData;
+
+			batch.set(requestRef, {
+				id: requestRef.id,
+				collegeId: selectedCollege.id,
+				collegeName: selectedCollege.Name,
+				collegeCode: selectedCollege.ClCode,
+				fullName: registrationData.fullName,
+				contactNumber: registrationData.contactNumber,
+				emailId: registrationData.emailId,
+				selectedDay: registrationData.selectedDay,
+				selectedEvent: selectedEvent.Name,
+				selectedEventId: String(selectedEvent.Id),
+				teamMember2: registrationData.teamMember2,
+				teamMember3: registrationData.teamMember3,
+				teamMember4: registrationData.teamMember4,
+				paymentProofUrl,
+				paymentProofPath: uploadResult.ref.fullPath,
+				paymentProofName: safeFileName,
+				paymentProofType: paymentProof.type,
+				paymentProofSize: paymentProof.size,
+				status: "pending",
+				createdAt: serverTimestamp(),
 			});
-			setSubmitted(false);
-		}, 3000);
+
+			await batch.commit();
+			setSubmitted(true);
+
+			setTimeout(() => {
+				setFormData({
+					fullName: "",
+					contactNumber: "",
+					emailId: "",
+					selectedDay: "",
+					selectedEvent: "",
+					selectedEventId: "",
+					collegeId: "",
+					isSoloPlayer: false,
+					teamMember2: "",
+					teamMember3: "",
+					teamMember4: "",
+					paymentProof: null,
+				});
+				setSubmitted(false);
+			}, 3000);
+		} catch (error) {
+			console.error("Error submitting registration: ", error);
+			setSubmitError(
+				"Registration could not be submitted. Please check the payment proof image and try again.",
+			);
+		} finally {
+			setSubmitting(false);
+		}
 	};
 
 	return (
@@ -250,8 +318,8 @@ export default function Register() {
 									Registration Successful!
 								</h3>
 								<p style={{ color: "var(--text-dim)" }}>
-									Welcome to URJA 2026! Check your email for confirmation
-									details.
+									Welcome to URJA 2026! Your registration details have been sent
+									for approval.
 								</p>
 							</div>
 						) : (
@@ -337,8 +405,8 @@ export default function Register() {
 										COLLEGE YOU WILL REPRESENT
 									</label>
 									<select
-										name="selectedCollege"
-										value={formData.selectedCollege}
+										name="collegeId"
+										value={formData.collegeId}
 										onChange={handleChange}
 										required
 										disabled={loading || colleges.length === 0}
@@ -363,7 +431,7 @@ export default function Register() {
 										</option>
 										{colleges.map((college) => (
 											<option key={college.id} value={college.id}>
-												{college.CollegeName ?? college.Name ?? college.ClCode ?? college.id}
+												{college.Name ?? college.ClCode ?? college.id}
 												{college.ClCode ? ` (${college.ClCode})` : ""}
 											</option>
 										))}
@@ -411,12 +479,12 @@ export default function Register() {
 										}}>
 										SELECT DAY
 									</label>
-										<select
-											name="selectedDay"
-											value={formData.selectedDay}
-											onChange={handleChange}
-											required
-											disabled={loading}
+									<select
+										name="selectedDay"
+										value={formData.selectedDay}
+										onChange={handleChange}
+										required
+										disabled={loading}
 										style={{
 											width: "100%",
 											borderRadius: "10px",
@@ -427,12 +495,12 @@ export default function Register() {
 											fontSize: "0.95rem",
 											fontFamily: "inherit",
 										}}>
-											<option value="">Select a day</option>
-											{eventDays.map(({ label: day }) => (
-												<option key={day} value={day}>
-													{day}
-												</option>
-											))}
+										<option value="">Select a day</option>
+										{eventDays.map(({ label: day }) => (
+											<option key={day} value={day}>
+												{day}
+											</option>
+										))}
 									</select>
 								</div>
 
@@ -448,12 +516,16 @@ export default function Register() {
 											}}>
 											SELECT EVENT
 										</label>
-											<select
-												name="selectedEvent"
-												value={formData.selectedEvent}
-												onChange={handleChange}
-												required
-												disabled={loading || Boolean(error) || (eventsByDay[formData.selectedDay] ?? []).length === 0}
+										<select
+											name="selectedEvent"
+											value={formData.selectedEvent}
+											onChange={handleChange}
+											required
+											disabled={
+												loading ||
+												Boolean(error) ||
+												getEventsForDay(formData.selectedDay).length === 0
+											}
 											style={{
 												width: "100%",
 												borderRadius: "10px",
@@ -464,18 +536,18 @@ export default function Register() {
 												fontSize: "0.95rem",
 												fontFamily: "inherit",
 											}}>
-												<option value="">
-													{loading
-														? "Loading events..."
-														: error
-															? "Events unavailable"
-															: "Select an event"}
+											<option value="">
+												{loading
+													? "Loading events..."
+													: error
+														? "Events unavailable"
+														: "Select an event"}
+											</option>
+											{getEventsForDay(formData.selectedDay).map((event) => (
+												<option key={event.Id} value={event.Id}>
+													{event.Name}
 												</option>
-												{(eventsByDay[formData.selectedDay] ?? []).map((event) => (
-													<option key={event.Id} value={event.Name}>
-														{event.Name}
-													</option>
-												))}
+											))}
 										</select>
 									</div>
 								)}
@@ -649,7 +721,9 @@ export default function Register() {
 								</div>
 
 								{submitError && (
-									<p style={{ color: "#ff8f8f", marginBottom: "16px" }} role="alert">
+									<p
+										style={{ color: "#ff8f8f", marginBottom: "16px" }}
+										role="alert">
 										{submitError}
 									</p>
 								)}
@@ -657,9 +731,9 @@ export default function Register() {
 								<button
 									type="submit"
 									className="btn btn-gold"
-									disabled={isSubmitting || loading || colleges.length === 0}
+									disabled={submitting || loading || colleges.length === 0}
 									style={{ width: "100%", justifyContent: "center" }}>
-									{isSubmitting ? "Submitting..." : "Register Now"}
+									{submitting ? "Submitting..." : "Register Now"}
 								</button>
 
 								<p

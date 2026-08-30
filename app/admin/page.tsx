@@ -3,157 +3,296 @@
 import { FormEvent, useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import {
-	addDoc,
 	collection,
-	doc,
 	getDocs,
-	runTransaction,
-	serverTimestamp,
+	updateDoc,
+	doc,
+	getDoc,
+	increment,
+	setDoc,
+	writeBatch,
 } from "firebase/firestore";
+import { getDownloadURL, ref } from "firebase/storage";
 
-type CollegeCredential = {
-	id: string;
-	ClCode: string;
-	CollegeName?: string;
-	Name?: string;
+type Event = {
+	Id: string;
+	Name: string;
+	Teams: string[];
 };
+
+type College = {
+	Id: string;
+	ClCode: string;
+	Name: string;
+	Events: Event[];
+};
+
+// const colleges: College[] = [
+// 	{
+// 		Id: "college-1",
+// 		ClCode: "COL001",
+// 		Name: "ABC College",
+// 		Events: [
+// 			{
+// 				Id: "event-1",
+// 				Name: "Tech Expo",
+// 				Teams: [
+// 					{ teamId: "Rahul Sharma" },
+// 					{ teamId: "Priya Patil" },
+// 				],
+// 			},
+// 			{
+// 				Id: "event-2",
+// 				Name: "Web Development",
+// 				Teams: [
+// 					{ teamId: "Aarav Kulkarni" },
+// 					{ teamId: "Sneha Joshi" },
+// 				],
+// 			},
+// 		],
+// 	},
+// 	{
+// 		Id: "college-2",
+// 		ClCode: "COL002",
+// 		Name: "XYZ College",
+// 		Events: [
+// 			{
+// 				Id: "event-3",
+// 				Name: "Tech Expo",
+// 				Teams: [
+// 					{ teamId: "Aditya More" },
+// 					{ teamId: "Riya Deshmukh" },
+// 				],
+// 			},
+// 			{
+// 				Id: "event-4",
+// 				Name: "Cultural Night",
+// 				Teams: [
+// 					{ teamId: "Omkar Jadhav" },
+// 					{ teamId: "Isha Shah" },
+// 				],
+// 			},
+// 		],
+// 	},
+// 	{
+// 		Id: "college-3",
+// 		ClCode: "COL003",
+// 		Name: "PQR College",
+// 		Events: [
+// 			{
+// 				Id: "event-5",
+// 				Name: "Sports Day",
+// 				Teams: [
+// 					{ teamId: "Vivek Pawar" },
+// 					{ teamId: "Neha Singh" },
+// 				],
+// 			},
+// 		],
+// 	},
+// ];
+
+const prizeOptions = [
+	{ value: "first", label: "First Place", points: 700 },
+	{ value: "second", label: "Second Place", points: 300 },
+	{ value: "third", label: "Third Place", points: 250 },
+];
 
 type PendingRegistration = {
 	id: string;
 	collegeId: string;
 	collegeName: string;
-	eventName: string;
+	collegeCode: string;
 	teamLeaderName: string;
-	paymentProof: string;
+	contactNumber: string;
+	eventId: string;
+	eventName: string;
+	selectedDay: string;
+	teamMember2: string;
+	teamMember3: string;
+	teamMember4: string;
+	paymentProofFileName: string | null;
+	paymentProofPath: string | null;
+	paymentProofUrl: string | null;
 };
 
-const mockRegistrations = [
-	{
-		id: 1,
-		name: "John Doe",
-		email: "john@example.com",
-		contingent: "A",
-		category: "Sports",
-	},
-	{
-		id: 2,
-		name: "Jane Smith",
-		email: "jane@example.com",
-		contingent: "B",
-		category: "Tech",
-	},
-	{
-		id: 3,
-		name: "Mike Johnson",
-		email: "mike@example.com",
-		contingent: "A",
-		category: "Cultural",
-	},
-	{
-		id: 4,
-		name: "Sarah Williams",
-		email: "sarah@example.com",
-		contingent: "C",
-		category: "Management",
-	},
-];
-
-const eventDayCollections = ["Day1", "Day2", "Day3", "Day4"] as const;
-
 export default function Admin() {
-	const [registrations, setRegistrations] = useState([]);
-	const [events, setEvents] = useState([]);
-	const [colleges, setColleges] = useState<CollegeCredential[]>([]);
+	const [collegesList, setCollegesList] = useState<College[]>([]);
+	const [selectedCollegeId, setSelectedCollegeId] = useState("");
+	const [selectedEventId, setSelectedEventId] = useState("");
+	const [selectedTeamId, setSelectedTeamId] = useState("");
+	const [selectedTeamLeader, setSelectedTeamLeader] = useState("");
+	const [selectedPrize, setSelectedPrize] = useState("");
+	const [pointStatus, setPointStatus] = useState("");
 	const [pendingRegistrations, setPendingRegistrations] = useState<
 		PendingRegistration[]
 	>([]);
+	const [isLoadingRegistrations, setIsLoadingRegistrations] = useState(true);
+	const [registrationError, setRegistrationError] = useState("");
 	const [processingRegistrationId, setProcessingRegistrationId] = useState<
 		string | null
 	>(null);
-	const [selectedCollegeId, setSelectedCollegeId] = useState("");
-	const [pointAmount, setPointAmount] = useState("");
-	const [pointEvent, setPointEvent] = useState("");
-	const [pointNote, setPointNote] = useState("");
-	const [pointStatus, setPointStatus] = useState("");
-	const [isSavingPoints, setIsSavingPoints] = useState(false);
+	const [isUpdating, setIsUpdating] = useState(false);
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	const [password, setPassword] = useState("");
 	const [errorMsg, setErrorMsg] = useState("");
 
+	const selectedCollege = collegesList.find(
+		(college) => college.Id === selectedCollegeId,
+	);
+
+	const availableEvents = selectedCollege?.Events ?? [];
+
+	const selectedEvent = availableEvents.find(
+		(event, index) => `${event.Id}-${index}` === selectedEventId,
+	);
+
+	const availableTeams = selectedEvent?.Teams ?? [];
+
+	const selectedTeam = availableTeams.find((team) => team === selectedTeamId);
+
+	const selectedPrizeOption = prizeOptions.find(
+		(prize) => prize.value === selectedPrize,
+	);
+
 	useEffect(() => {
-		const initializeInfo = async () => {
+		if (!isLoggedIn) return;
+
+		let active = true;
+
+		const fetchPendingRegistrations = async () => {
+			setIsLoadingRegistrations(true);
+			setRegistrationError("");
+
 			try {
-				const [eventDaySnapshots, collegesSnapshot] = await Promise.all([
-					Promise.all(
-						eventDayCollections.map((day) =>
-							getDocs(collection(db, day)),
-						),
-					),
-					getDocs(collection(db, "CollegeCreds")),
-				]);
-				setEvents(
-					eventDaySnapshots.flatMap((snapshot) =>
-						snapshot.docs.map((eventDoc) => ({
-							id: eventDoc.id,
-							...eventDoc.data(),
-						})),
-					),
-				);
-				setColleges(
-					collegesSnapshot.docs.map(
-						(collegeDoc) =>
-							({
-								id: collegeDoc.id,
-								...collegeDoc.data(),
-							}) as CollegeCredential,
-					),
-				);
+				const collegeSnapshot = await getDocs(collection(db, "CollegeCreds"));
+				const collegeList = collegeSnapshot.docs.map((doc) => ({
+					Id: doc.id,
+					...doc.data(),
+				}));
+				setCollegesList(collegeList as College[]);
+
 				const requestGroups = await Promise.all(
-					collegesSnapshot.docs.map(async (collegeDoc) => {
-						const collegeData = collegeDoc.data() as CollegeCredential;
+					collegeSnapshot.docs.map(async (collegeDoc) => {
+						const collegeData = collegeDoc.data();
 						const requestsSnapshot = await getDocs(
-							collection(doc(db, "CollegeCreds", collegeDoc.id), "Requests"),
+							collection(db, "CollegeCreds", collegeDoc.id, "Requests"),
 						);
+
 						return requestsSnapshot.docs
 							.filter((requestDoc) => {
-								const status = requestDoc.data().status;
-								return !status || status === "pending";
+								const data = requestDoc.data();
+								return !data.status || data.status === "pending";
 							})
 							.map((requestDoc) => {
-								const request = requestDoc.data();
+								const data = requestDoc.data();
+								const normalizedPaymentProofName =
+									data.paymentProofName ??
+									data.paymentProofFileName ??
+									data.paymentProof?.name ??
+									null;
+
 								return {
 									id: requestDoc.id,
-									collegeId: collegeDoc.id,
+
+									collegeId: data.collegeId ?? collegeDoc.id,
 									collegeName:
-										request.collegeName ??
+										data.collegeName ??
 										collegeData.CollegeName ??
 										collegeData.Name ??
-										collegeData.ClCode,
-									eventName: request.selectedEvent ?? "Event not specified",
-									teamLeaderName: request.fullName ?? "Name not specified",
-									paymentProof:
-										request.paymentProofUrl ??
-										request.paymentProofFileName ??
-										"Not provided",
-								};
-							}) as PendingRegistration[];
+										"Unknown College",
+									collegeCode:
+										data.collegeCode ?? collegeData.ClCode ?? "",
+
+									teamLeaderName: data.fullName ?? data.teamLeaderName ?? "Unknown",
+									contactNumber: data.contactNumber ?? "Not provided",
+
+									eventId: data.selectedEventId ?? data.eventId ?? "",
+									eventName: data.selectedEvent ?? data.eventName ?? "Unknown Event",
+
+									selectedDay: data.selectedDay ?? "",
+
+									teamMember2: data.teamMember2 ?? "",
+									teamMember3: data.teamMember3 ?? "",
+									teamMember4: data.teamMember4 ?? "",
+
+									paymentProofFileName: normalizedPaymentProofName,
+									paymentProofPath: data.paymentProofPath ?? null,
+									paymentProofUrl: data.paymentProofUrl ?? null,
+								} satisfies PendingRegistration;
+							});
 					}),
 				);
-				setPendingRegistrations(requestGroups.flat());
+
+				const pending = requestGroups.flat();
+
+				const registrationsWithProofs = await Promise.all(
+					pending.map(async (registration) => {
+						if (registration.paymentProofUrl) return registration;
+						if (!registration.paymentProofPath && !registration.paymentProofFileName) {
+							return registration;
+						}
+
+						try {
+							const proofRef = ref(
+								storage,
+								registration.paymentProofPath ??
+									`payment-proofs/${registration.collegeId}/${registration.id}-${registration.paymentProofFileName}`,
+							);
+							const paymentProofUrl = await getDownloadURL(proofRef);
+							return { ...registration, paymentProofUrl };
+						} catch {
+							return registration;
+						}
+					}),
+				);
+
+				if (active) setPendingRegistrations(registrationsWithProofs);
 			} catch (fetchError) {
-				console.error("Failed to load admin data:", fetchError);
+				console.error("Failed to fetch pending registrations:", fetchError);
+				if (active) {
+					setRegistrationError(
+						"Could not load pending registrations. Check Firestore permissions and try again.",
+					);
+				}
+			} finally {
+				if (active) setIsLoadingRegistrations(false);
 			}
 		};
-		initializeInfo();
-	}, []);
+
+		const fetchTeams = async () => {
+			if (!selectedTeamId) {
+				setSelectedTeamLeader("");
+				return;
+			}
+
+			try {
+				const teamRef = doc(db, "Teams", selectedTeamId);
+				const teamsnap = await getDoc(teamRef);
+				const teamData = teamsnap.data();
+				setSelectedTeamLeader(teamData?.teamLeader ?? "");
+			} catch (e) {
+				console.error("Failed to fetch team data:", e);
+				setSelectedTeamLeader("");
+			}
+		};
+
+		fetchPendingRegistrations();
+		fetchTeams();
+
+		return () => {
+			active = false;
+		};
+	}, [isLoggedIn, selectedTeamId]);
 
 	const handleRegistrationDecision = async (
 		registration: PendingRegistration,
 		decision: "accepted" | "rejected",
 	) => {
 		setProcessingRegistrationId(registration.id);
+		setRegistrationError("");
+
 		try {
 			const requestRef = doc(
 				db,
@@ -162,111 +301,176 @@ export default function Admin() {
 				"Requests",
 				registration.id,
 			);
-			const collegeRef = doc(db, "CollegeCreds", registration.collegeId);
-			await runTransaction(db, async (transaction) => {
-				const requestSnapshot = await transaction.get(requestRef);
-				if (!requestSnapshot.exists()) throw new Error("Request not found.");
-				const currentRequest = requestSnapshot.data();
-				if (currentRequest.status && currentRequest.status !== "pending") {
-					throw new Error("Request has already been reviewed.");
-				}
 
-				if (decision === "accepted") {
-					const collegeSnapshot = await transaction.get(collegeRef);
-					if (!collegeSnapshot.exists()) throw new Error("College not found.");
-					const collegeData = collegeSnapshot.data();
-					const currentPoints = Number(
-						collegeData.PRPoints ??
-							collegeData.prPoints ??
-							collegeData.Points ??
-							collegeData.points ??
-							0,
-					);
-					transaction.update(collegeRef, { PRPoints: currentPoints + 50 });
-				}
-
-				transaction.update(requestRef, {
-					status: decision,
-					reviewedAt: serverTimestamp(),
+			// --------------------------------------------------
+			// REJECT
+			// --------------------------------------------------
+			if (decision === "rejected") {
+				await updateDoc(requestRef, {
+					status: "rejected",
+					reviewedAt: new Date(),
 				});
+
+				setPendingRegistrations((current) =>
+					current.filter((item) => item.id !== registration.id),
+				);
+
+				return;
+			}
+
+			// --------------------------------------------------
+			// ACCEPT
+			// --------------------------------------------------
+
+			// 1. Create Team first
+			const teamRef = doc(collection(db, "Teams"));
+			const teamId = teamRef.id;
+
+			await setDoc(teamRef, {
+				teamLeader: registration.teamLeaderName,
+				member2: registration.teamMember2,
+				member3: registration.teamMember3,
+				member4: registration.teamMember4,
+				collegeId: registration.collegeId,
+				eventId: registration.eventId,
+				eventName: registration.eventName,
+				createdAt: new Date(),
 			});
+
+			// 2. Now read existing Events
+			const collegeRef = doc(db, "CollegeCreds", registration.collegeId);
+			const collegeSnapshot = await getDoc(collegeRef);
+			const collegeData = collegeSnapshot.data();
+
+			const currentEvents: Event[] = Array.isArray(collegeData?.Events)
+				? collegeData.Events
+				: [];
+
+			// 3. Find the event
+			const eventIndex = currentEvents.findIndex(
+				(event) => String(event.Id) === String(registration.eventId),
+			);
+
+			// 4. Create/update the Event AFTER we have teamId
+			let updatedEvents: Event[];
+
+			if (eventIndex === -1) {
+				// Event doesn't exist yet
+				const newEvent: Event = {
+					Id: registration.eventId,
+					Name: registration.eventName,
+					Teams: [teamId],
+				};
+
+				updatedEvents = [...currentEvents, newEvent];
+			} else {
+				// Event already exists
+				updatedEvents = [...currentEvents];
+
+				updatedEvents[eventIndex] = {
+					...updatedEvents[eventIndex],
+					Teams: [...(updatedEvents[eventIndex].Teams ?? []), teamId],
+				};
+			}
+
+			// --------------------------------------------------
+			// UPDATE COLLEGE + REQUEST
+			// --------------------------------------------------
+
+			const batch = writeBatch(db);
+
+			batch.update(collegeRef, {
+				PRPoints: increment(50),
+				Teams: increment(1),
+				Events: updatedEvents,
+			});
+
+			batch.update(requestRef, {
+				status: "accepted",
+				reviewedAt: new Date(),
+				teamId: teamId,
+			});
+
+			await batch.commit();
+
+			// --------------------------------------------------
+			// REMOVE FROM PENDING UI
+			// --------------------------------------------------
+
 			setPendingRegistrations((current) =>
 				current.filter((item) => item.id !== registration.id),
 			);
 		} catch (decisionError) {
 			console.error("Failed to review registration:", decisionError);
-			setPointStatus(
-				"Could not update the registration. Check Firestore permissions and try again.",
+
+			setRegistrationError(
+				decisionError instanceof Error
+					? decisionError.message
+					: "Could not update the registration. Check Firestore permissions and try again.",
 			);
 		} finally {
 			setProcessingRegistrationId(null);
 		}
 	};
 
-	const handlePointsChange = async (event: FormEvent) => {
+	const handleLogin = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
-		const amount = Number(pointAmount);
-		const selectedCollege = colleges.find(
-			(college) => college.id === selectedCollegeId,
-		);
-		if (!selectedCollege || !Number.isFinite(amount) || amount === 0) {
-			setPointStatus("Select a college and enter a non-zero point amount.");
-			return;
-		}
-		setIsSavingPoints(true);
-		setPointStatus("");
-		try {
-			const collegeRef = doc(db, "CollegeCreds", selectedCollege.id);
-			await runTransaction(db, async (transaction) => {
-				const current = await transaction.get(collegeRef);
-				if (!current.exists())
-					throw new Error("College record no longer exists.");
-				const currentData = current.data();
-				const currentPoints = Number(
-					currentData.PRPoints ??
-						currentData.prPoints ??
-						currentData.Points ??
-						currentData.points ??
-						0,
-				);
-				transaction.update(collegeRef, { PRPoints: currentPoints + amount });
-			});
-			await addDoc(collection(db, "prPointTransactions"), {
-				collegeCode: selectedCollege.ClCode.toUpperCase(),
-				points: amount,
-				event: pointEvent.trim() || "Admin adjustment",
-				note: pointNote.trim() || "PR Points updated by admin",
-				createdAt: serverTimestamp(),
-			});
-			setPointAmount("");
-			setPointEvent("");
-			setPointNote("");
-			setPointStatus("PR Points updated and transaction recorded.");
-		} catch (saveError) {
-			console.error("Failed to update PR Points:", saveError);
-			setPointStatus(
-				"Could not update PR Points. Check Firestore permissions and try again.",
-			);
-		} finally {
-			setIsSavingPoints(false);
-		}
-	};
 
-	const handleLogin = (e: any) => {
-		e.preventDefault();
 		if (password === "admin123") {
 			setIsLoggedIn(true);
 			setErrorMsg("");
-		} else {
-			setErrorMsg("Invalid password");
-			setPassword("");
+			return;
 		}
+
+		setErrorMsg("Invalid password");
+		setPassword("");
 	};
 
 	const handleLogout = () => {
 		setIsLoggedIn(false);
 		setPassword("");
 		setErrorMsg("");
+	};
+
+	const handlePointsChange = async (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+
+		if (
+			!selectedCollege ||
+			!selectedEvent ||
+			!selectedTeam ||
+			!selectedPrizeOption
+		) {
+			setPointStatus("Please select a college, event, team, and prize.");
+			return;
+		}
+		setIsUpdating(true);
+
+		try {
+			const collegeRef = doc(db, "CollegeCreds", selectedCollege.Id);
+
+			const batch = writeBatch(db);
+
+			batch.update(collegeRef, {
+				PRPoints: increment(selectedPrizeOption.points),
+			});
+			await batch.commit();
+		} catch (e) {
+			console.error("Failed to fetch college data: ", e);
+		} finally {
+			setIsUpdating(false);
+		}
+
+		if (!isUpdating) {
+			setPointStatus(
+				`${selectedPrizeOption.label} awarded to ${selectedTeamLeader} from ${selectedCollege.Name} for ${selectedEvent.Name} — ${selectedPrizeOption.points} PR Points.`,
+			);
+		}
+
+		setSelectedCollegeId("");
+		setSelectedEventId("");
+		setSelectedTeamId("");
+		setSelectedPrize("");
 	};
 
 	return (
@@ -288,27 +492,28 @@ export default function Admin() {
 						<div
 							style={{
 								maxWidth: "420px",
-								margin: "0 auto",
 								width: "100%",
+								margin: "0 auto",
 								padding: "0 24px",
 							}}>
 							<div style={{ textAlign: "center", marginBottom: "40px" }}>
 								<div
 									style={{
 										display: "flex",
-										height: "90px",
-										width: "90px",
 										alignItems: "center",
 										justifyContent: "center",
+										width: "90px",
+										height: "90px",
+										margin: "0 auto 24px",
 										borderRadius: "9999px",
 										background:
 											"linear-gradient(135deg, var(--purple), var(--pink))",
 										fontSize: "2.2rem",
 										boxShadow: "0 0 60px rgba(232,69,184,0.35)",
-										margin: "0 auto 24px",
 									}}>
 									🔐
 								</div>
+
 								<h1 className="hero-title" style={{ fontSize: "2.2rem" }}>
 									Admin Panel
 								</h1>
@@ -322,43 +527,45 @@ export default function Admin() {
 									borderRadius: "20px",
 									padding: "36px",
 								}}>
-								<div style={{ marginBottom: "20px" }}>
-									<label
-										style={{
-											display: "block",
-											marginBottom: "10px",
-											color: "var(--text-dim)",
-											fontSize: "0.75rem",
-											letterSpacing: "1.5px",
-										}}>
-										ADMIN PASSWORD
-									</label>
-									<input
-										type="password"
-										value={password}
-										onChange={(e) => setPassword(e.target.value)}
-										placeholder="Enter password"
-										style={{
-											width: "100%",
-											borderRadius: "10px",
-											color: "var(--text)",
-											padding: "14px 16px",
-											border: "1px solid var(--border)",
-											background: "rgba(0,0,0,0.3)",
-											fontSize: "0.95rem",
-											fontFamily: "inherit",
-										}}
-									/>
-								</div>
+								<label
+									htmlFor="admin-password"
+									style={{
+										display: "block",
+										marginBottom: "10px",
+										color: "var(--text-dim)",
+										fontSize: "0.75rem",
+										letterSpacing: "1.5px",
+									}}>
+									ADMIN PASSWORD
+								</label>
+
+								<input
+									id="admin-password"
+									type="password"
+									value={password}
+									onChange={(event) => setPassword(event.target.value)}
+									placeholder="Enter password"
+									style={{
+										width: "100%",
+										padding: "14px 16px",
+										borderRadius: "10px",
+										border: "1px solid var(--border)",
+										background: "rgba(0,0,0,0.3)",
+										color: "var(--text)",
+										fontSize: "0.95rem",
+										fontFamily: "inherit",
+										boxSizing: "border-box",
+									}}
+								/>
 
 								{errorMsg && (
 									<div
 										style={{
-											marginBottom: "20px",
-											background: "rgba(255, 100, 100, 0.1)",
-											border: "1px solid rgba(255, 100, 100, 0.5)",
-											borderRadius: "10px",
+											marginTop: "16px",
 											padding: "12px",
+											borderRadius: "10px",
+											border: "1px solid rgba(255,100,100,0.5)",
+											background: "rgba(255,100,100,0.1)",
 											color: "#ff6464",
 											fontSize: "0.9rem",
 										}}>
@@ -369,7 +576,11 @@ export default function Admin() {
 								<button
 									type="submit"
 									className="btn btn-purple-gradient"
-									style={{ width: "100%", justifyContent: "center" }}>
+									style={{
+										width: "100%",
+										justifyContent: "center",
+										marginTop: "20px",
+									}}>
 									Login
 								</button>
 
@@ -380,348 +591,626 @@ export default function Admin() {
 										fontSize: "0.82rem",
 										textAlign: "center",
 									}}>
-									Hint: Use admin123
+									Demo password: admin123
 								</p>
 							</form>
 						</div>
 					</section>
 				) : (
-					<>
-						<section className="section" style={{ marginTop: "80px" }}>
+					<section className="section" style={{ marginTop: "80px" }}>
+						<div
+							style={{
+								display: "flex",
+								justifyContent: "space-between",
+								alignItems: "center",
+								gap: "20px",
+								marginBottom: "40px",
+								flexWrap: "wrap",
+							}}>
+							<h1 className="hero-title" style={{ fontSize: "2rem" }}>
+								Dashboard
+							</h1>
+
+							<button onClick={handleLogout} className="btn btn-gold">
+								Logout
+							</button>
+						</div>
+
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+								gap: "24px",
+								marginBottom: "50px",
+							}}>
+							<div className="feature-card">
+								<div className="feature-icon">👥</div>
+								<h3>Pending Registrations</h3>
+								<div className="admin-stat-value">
+									{pendingRegistrations.length}
+								</div>
+							</div>
+
+							<div className="feature-card">
+								<div className="feature-icon">📅</div>
+								<h3>Active Events</h3>
+								<div className="admin-stat-value">
+									{collegesList.reduce(
+										(total, college) => total + (college.Events?.length || 0),
+										0,
+									)}
+								</div>
+							</div>
+
+							<div className="feature-card">
+								<div className="feature-icon">🏆</div>
+								<h3>Colleges</h3>
+								<div className="admin-stat-value">{collegesList.length}</div>
+							</div>
+						</div>
+
+						<section
+							className="admin-points-panel"
+							style={{
+								padding: "32px",
+								marginBottom: "60px",
+								borderRadius: "20px",
+								border: "1px solid var(--border)",
+								background:
+									"linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))",
+								boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+							}}>
+							<div style={{ marginBottom: "28px" }}>
+								<p className="eyebrow">PR POINTS CONTROL</p>
+								<h2 className="basic-heading">Update college PR points</h2>
+								<p className="admin-points-help">
+									Add or deduct points using a positive or negative value.
+								</p>
+							</div>
+
+							<form
+								className="admin-points-form"
+								onSubmit={handlePointsChange}
+								style={{
+									display: "grid",
+									gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+									gap: "16px",
+								}}>
+								<select
+									value={selectedCollegeId}
+									onChange={(event) => {
+										setSelectedCollegeId(event.target.value);
+										setSelectedEventId("");
+										setSelectedTeamId("");
+										setSelectedPrize("");
+										setPointStatus("");
+									}}
+									required
+									aria-label="Select college"
+									style={inputStyle}>
+									<option value="">Select college</option>
+									{collegesList.map((college) => (
+										<option key={college.Id} value={college.Id}>
+											{college.Name} ({college.ClCode})
+										</option>
+									))}
+								</select>
+
+								<select
+									value={selectedEventId}
+									onChange={(event) => {
+										setSelectedEventId(event.target.value);
+										setSelectedTeamId("");
+										setSelectedPrize("");
+										setPointStatus("");
+									}}
+									disabled={!selectedCollegeId}
+									required
+									aria-label="Select event"
+									style={{
+										...inputStyle,
+										opacity: selectedCollegeId ? 1 : 0.5,
+										cursor: selectedCollegeId ? "pointer" : "not-allowed",
+									}}>
+									<option value="">
+										{selectedCollegeId
+											? "Select event"
+											: "Select college first"}
+									</option>
+									{availableEvents.map((event, index) => {
+										const eventSelectionId = `${event.Id}-${index}`;
+
+										return (
+											<option key={eventSelectionId} value={eventSelectionId}>
+												{event.Name}
+											</option>
+										);
+									})}
+								</select>
+
+								<select
+									value={selectedTeamId}
+									onChange={(event) => {
+										setSelectedTeamId(event.target.value);
+										setSelectedPrize("");
+										setPointStatus("");
+									}}
+									disabled={!selectedEventId}
+									required
+									aria-label="Select team leader"
+									style={{
+										...inputStyle,
+										opacity: selectedEventId ? 1 : 0.5,
+										cursor: selectedEventId ? "pointer" : "not-allowed",
+									}}>
+									<option value="">
+										{selectedEventId
+											? "Select team leader"
+											: "Select event first"}
+									</option>
+									{availableTeams.map((team) => (
+										<option key={team} value={team}>
+											{selectedTeamLeader}
+										</option>
+									))}
+								</select>
+
+								<select
+									value={selectedPrize}
+									onChange={(event) => {
+										setSelectedPrize(event.target.value);
+										setPointStatus("");
+									}}
+									disabled={!selectedTeamId}
+									required
+									aria-label="Select prize"
+									style={{
+										...inputStyle,
+										opacity: selectedTeamId ? 1 : 0.5,
+										cursor: selectedTeamId ? "pointer" : "not-allowed",
+									}}>
+									<option value="">
+										{selectedTeamId ? "Select prize" : "Select team first"}
+									</option>
+									{prizeOptions.map((prize) => (
+										<option key={prize.value} value={prize.value}>
+											{prize.label} — {prize.points} PR Points
+										</option>
+									))}
+								</select>
+
+								<button
+									type="submit"
+									className="btn btn-purple-gradient"
+									disabled={
+										!selectedCollegeId ||
+										!selectedEventId ||
+										!selectedTeamId ||
+										!selectedPrize ||
+										isUpdating
+									}
+									style={{
+										minHeight: "50px",
+										justifyContent: "center",
+										gridColumn: "1 / -1",
+									}}>
+									Award PR Points
+								</button>
+							</form>
+
+							{pointStatus && (
+								<p
+									className="admin-points-status"
+									style={{
+										marginTop: "18px",
+										padding: "12px 16px",
+										borderRadius: "10px",
+										background: "rgba(232,194,106,0.08)",
+										border: "1px solid rgba(232,194,106,0.2)",
+										color: "var(--gold)",
+									}}>
+									{pointStatus}
+								</p>
+							)}
+
+							<div
+								style={{
+									marginTop: "28px",
+									padding: "16px 18px",
+									borderRadius: "12px",
+									background: "rgba(255,255,255,0.025)",
+									border: "1px solid var(--border)",
+								}}>
+								<p
+									style={{
+										margin: 0,
+										color: "var(--text-dim)",
+										fontSize: "0.85rem",
+										lineHeight: 1.6,
+									}}>
+									<strong style={{ color: "var(--text)" }}>
+										Prize Points:
+									</strong>{" "}
+									First Place = 700 &nbsp;•&nbsp; Second Place = 300
+									&nbsp;•&nbsp; Third Place = 250
+								</p>
+							</div>
+						</section>
+
+						<section>
 							<div
 								style={{
 									display: "flex",
 									justifyContent: "space-between",
-									alignItems: "center",
-									marginBottom: "40px",
+									alignItems: "flex-end",
+									gap: "20px",
+									flexWrap: "wrap",
+									marginBottom: "30px",
 								}}>
-								<h1 className="hero-title" style={{ fontSize: "2rem" }}>
-									Dashboard
-								</h1>
-								<button onClick={handleLogout} className="btn btn-gold">
-									Logout
-								</button>
-							</div>
-
-							<div
-								style={{
-									display: "grid",
-									gap: "24px",
-									gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-									marginBottom: "60px",
-								}}>
-								<div className="feature-card">
-									<div className="feature-icon">👥</div>
-									<h3>Total Registrations</h3>
-									<div
-										style={{
-											fontSize: "2.5rem",
-											fontWeight: "bold",
-											color: "var(--gold)",
-											marginTop: "10px",
-										}}>
-										{mockRegistrations.length}
-									</div>
-								</div>
-								<div className="feature-card">
-									<div className="feature-icon">📅</div>
-									<h3>Active Events</h3>
-									<div
-										style={{
-											fontSize: "2.5rem",
-											fontWeight: "bold",
-											color: "var(--gold)",
-											marginTop: "10px",
-										}}>
-										{events.length}
-									</div>
-								</div>
-								<div className="feature-card">
-									<div className="feature-icon">🏆</div>
-									<h3>Contingents</h3>
-									<div
-										style={{
-											fontSize: "2.5rem",
-											fontWeight: "bold",
-											color: "var(--gold)",
-											marginTop: "10px",
-										}}>
-										4
-									</div>
-								</div>
-							</div>
-
-							<section className="admin-points-panel">
 								<div>
-									<p className="eyebrow">PR POINTS CONTROL</p>
-									<h2 className="basic-heading">Record a points transaction</h2>
-									<p className="admin-points-help">
-										Use a positive value to add points or a negative value to
-										deduct them. Every update appears in the college dashboard
-										history.
+									<p className="eyebrow">APPLICATION REVIEW</p>
+									<h2 className="basic-heading" style={{ marginBottom: "8px" }}>
+										Pending Registrations
+									</h2>
+									<p
+										style={{
+											margin: 0,
+											color: "var(--text-dim)",
+											fontSize: "0.9rem",
+										}}>
+										Review payment proof and registration details before
+										accepting an application.
 									</p>
 								</div>
-								<form
-									className="admin-points-form"
-									onSubmit={handlePointsChange}>
-									<select
-										value={selectedCollegeId}
-										onChange={(event) =>
-											setSelectedCollegeId(event.target.value)
-										}
-										required>
-										<option value="">Select college</option>
-										{colleges.map((college) => (
-											<option key={college.id} value={college.id}>
-												{college.CollegeName ?? college.Name ?? college.ClCode}{" "}
-												({college.ClCode})
-											</option>
-										))}
-									</select>
-									<input
-										type="number"
-										value={pointAmount}
-										onChange={(event) => setPointAmount(event.target.value)}
-										placeholder="Points, e.g. 50 or -10"
-										required
-									/>
-									<input
-										value={pointEvent}
-										onChange={(event) => setPointEvent(event.target.value)}
-										placeholder="Event name (optional)"
-									/>
-									<input
-										value={pointNote}
-										onChange={(event) => setPointNote(event.target.value)}
-										placeholder="Reason / note (optional)"
-									/>
-									<button
-										type="submit"
-										className="btn btn-purple-gradient"
-										disabled={isSavingPoints}>
-										{isSavingPoints ? "Saving..." : "Update PR Points"}
-									</button>
-								</form>
-								{pointStatus && (
-									<p className="admin-points-status">{pointStatus}</p>
-								)}
 
-								<div style={{ marginTop: "32px" }}>
-									<h3 className="basic-heading" style={{ fontSize: "1.15rem" }}>
-										Pending Registrations
+								<div
+									style={{
+										padding: "9px 14px",
+										borderRadius: "999px",
+										border: "1px solid rgba(232,194,106,0.25)",
+										background: "rgba(232,194,106,0.08)",
+										color: "var(--gold)",
+										fontSize: "0.82rem",
+										fontWeight: 700,
+									}}>
+									{pendingRegistrations.length} Pending
+								</div>
+							</div>
+
+							{registrationError && (
+								<div
+									style={{
+										marginBottom: "20px",
+										padding: "14px 16px",
+										borderRadius: "12px",
+										border: "1px solid rgba(255,100,100,0.4)",
+										background: "rgba(255,100,100,0.08)",
+										color: "#ff7777",
+										fontSize: "0.9rem",
+									}}>
+									{registrationError}
+								</div>
+							)}
+
+							{isLoadingRegistrations ? (
+								<div className="feature-card" style={{ textAlign: "center" }}>
+									<div
+										style={{
+											fontSize: "2rem",
+											marginBottom: "12px",
+										}}>
+										⏳
+									</div>
+									<p
+										style={{
+											margin: 0,
+											color: "var(--text-dim)",
+										}}>
+										Loading pending registrations...
+									</p>
+								</div>
+							) : pendingRegistrations.length === 0 ? (
+								<div
+									className="feature-card"
+									style={{
+										textAlign: "center",
+										padding: "50px 24px",
+									}}>
+									<div
+										style={{
+											fontSize: "2.5rem",
+											marginBottom: "14px",
+										}}>
+										✓
+									</div>
+									<h3 style={{ marginBottom: "8px" }}>
+										No Pending Registrations
 									</h3>
-									{pendingRegistrations.length === 0 ? (
-										<p className="admin-points-help" style={{ marginTop: "14px" }}>
-											No pending registrations.
-										</p>
-									) : (
-										<div
-											style={{
-												display: "grid",
-												gap: "14px",
-												marginTop: "18px",
-											}}>
-											{pendingRegistrations.map((registration) => {
-												const isProcessing =
-													processingRegistrationId === registration.id;
-												const paymentProofIsUrl = registration.paymentProof.startsWith(
-													"http",
-												);
-												return (
-													<div
-														key={`${registration.collegeId}-${registration.id}`}
+									<p
+										style={{
+											margin: 0,
+											color: "var(--text-dim)",
+										}}>
+										All registration applications have been reviewed.
+									</p>
+								</div>
+							) : (
+								<div
+									style={{
+										display: "grid",
+										gridTemplateColumns: "repeat(auto-fit, minmax(330px, 1fr))",
+										gap: "24px",
+									}}>
+									{pendingRegistrations.map((registration) => {
+										const isProcessing =
+											processingRegistrationId === registration.id;
+
+										return (
+											<article
+												key={`${registration.collegeId}-${registration.id}`}
+												style={{
+													overflow: "hidden",
+													borderRadius: "20px",
+													border: "1px solid var(--border)",
+													background:
+														"linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))",
+													boxShadow: "0 20px 60px rgba(0,0,0,0.16)",
+												}}>
+												<div
+													style={{
+														padding: "20px 22px",
+														borderBottom: "1px solid var(--border)",
+														display: "flex",
+														justifyContent: "space-between",
+														alignItems: "center",
+														gap: "12px",
+													}}>
+													<div>
+														<p
+															style={{
+																margin: "0 0 5px",
+																color: "var(--gold)",
+																fontSize: "0.72rem",
+																fontWeight: 700,
+																letterSpacing: "1.4px",
+															}}>
+															PENDING APPLICATION
+														</p>
+														<h3
+															style={{
+																margin: 0,
+																color: "var(--text)",
+																fontSize: "1.15rem",
+															}}>
+															{registration.teamLeaderName}
+														</h3>
+													</div>
+
+													<span
 														style={{
-															border: "1px solid var(--border)",
-															borderRadius: "12px",
-															padding: "18px",
-															background: "rgba(0, 0, 0, 0.16)",
+															flexShrink: 0,
+															padding: "5px 10px",
+															borderRadius: "999px",
+															background: "rgba(232,194,106,0.1)",
+															border: "1px solid rgba(232,194,106,0.2)",
+															color: "var(--gold)",
+															fontSize: "0.72rem",
 														}}>
+														{registration.selectedDay || "Day"}
+													</span>
+												</div>
+
+												<div style={{ padding: "22px" }}>
+													<div
+														style={{
+															display: "grid",
+															gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+															gap: "14px",
+														}}>
+														<div style={detailCardStyle}>
+															<span style={detailLabelStyle}>COLLEGE</span>
+															<strong style={detailValueStyle}>
+																{registration.collegeName}
+															</strong>
+														</div>
+
+														<div style={detailCardStyle}>
+															<span style={detailLabelStyle}>EVENT</span>
+															<strong style={detailValueStyle}>
+																{registration.eventName}
+															</strong>
+														</div>
+
 														<div
 															style={{
-																display: "grid",
-																gap: "8px",
-																color: "var(--text-dim)",
+																...detailCardStyle,
+																gridColumn: "1 / -1",
 															}}>
-															<div>
-																<strong style={{ color: "var(--text)" }}>Event:</strong>{" "}
-																{registration.eventName}
-															</div>
-															<div>
-																<strong style={{ color: "var(--text)" }}>College:</strong>{" "}
-																{registration.collegeName}
-															</div>
-															<div>
-																<strong style={{ color: "var(--text)" }}>
-																	Team Leader:
-																</strong>{" "}
-																{registration.teamLeaderName}
-															</div>
-															<div>
-																<strong style={{ color: "var(--text)" }}>
-																	Payment Proof:
-																</strong>{" "}
-																{paymentProofIsUrl ? (
-																	<a
-																		href={registration.paymentProof}
-																		target="_blank"
-																		rel="noreferrer"
-																	style={{ color: "var(--gold)" }}>
-																		View proof
-																	</a>
-																) : (
-																	registration.paymentProof
-																)}
-															</div>
+															<span style={detailLabelStyle}>CONTACT NO.</span>
+															<strong style={detailValueStyle}>
+																{registration.contactNumber}
+															</strong>
 														</div>
+													</div>
+
+													<div style={{ marginTop: "18px" }}>
 														<div
 															style={{
 																display: "flex",
-																gap: "10px",
-																flexWrap: "wrap",
-																marginTop: "16px",
+																justifyContent: "space-between",
+																alignItems: "center",
+																marginBottom: "10px",
 															}}>
-															<button
-																type="button"
-																className="btn btn-gold"
-																disabled={isProcessing}
-																onClick={() =>
-																	handleRegistrationDecision(registration, "accepted")
-																}>
-																Accept and Add 50 Points
-															</button>
-															<button
-																type="button"
-																className="btn btn-purple-gradient"
-																disabled={isProcessing}
-																onClick={() =>
-																	handleRegistrationDecision(registration, "rejected")
-																}>
-																Reject
-															</button>
+															<span style={detailLabelStyle}>
+																PAYMENT PROOF
+															</span>
+															{registration.paymentProofUrl && (
+																<a
+																	href={registration.paymentProofUrl}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	style={{
+																		color: "var(--gold)",
+																		fontSize: "0.75rem",
+																		textDecoration: "none",
+																	}}>
+																	Open full image ↗
+																</a>
+															)}
+														</div>
+
+														<div
+															style={{
+																minHeight: "180px",
+																borderRadius: "14px",
+																overflow: "hidden",
+																border: "1px solid var(--border)",
+																background: "rgba(0,0,0,0.22)",
+																display: "flex",
+																alignItems: "center",
+																justifyContent: "center",
+															}}>
+															{registration.paymentProofUrl ? (
+																<img
+																	src={registration.paymentProofUrl}
+																	alt={`Payment proof for ${registration.teamLeaderName}`}
+																	style={{
+																		display: "block",
+																		width: "100%",
+																		maxHeight: "300px",
+																		objectFit: "contain",
+																	}}
+																/>
+															) : (
+																<div
+																	style={{
+																		padding: "30px",
+																		textAlign: "center",
+																		color: "var(--text-dim)",
+																	}}>
+																	<div
+																		style={{
+																			fontSize: "2rem",
+																			marginBottom: "10px",
+																		}}>
+																		🖼️
+																	</div>
+																	<div style={{ fontSize: "0.85rem" }}>
+																		Payment proof image unavailable
+																	</div>
+																</div>
+															)}
 														</div>
 													</div>
-												);
-											})}
-										</div>
-									)}
-								</div>
-							</section>
 
-							<h2 className="basic-heading">Recent Registrations</h2>
-
-							<div
-								style={{
-									overflowX: "auto",
-									background: "var(--card)",
-									border: "1px solid var(--border)",
-									borderRadius: "18px",
-									marginTop: "30px",
-								}}>
-								<table
-									style={{
-										width: "100%",
-										borderCollapse: "collapse",
-									}}>
-									<thead>
-										<tr style={{ borderBottom: "1px solid var(--border)" }}>
-											<th
-												style={{
-													padding: "16px 24px",
-													textAlign: "left",
-													fontWeight: 700,
-													fontSize: "0.9rem",
-													letterSpacing: "1px",
-													color: "var(--text-dim)",
-												}}>
-												NAME
-											</th>
-											<th
-												style={{
-													padding: "16px 24px",
-													textAlign: "left",
-													fontWeight: 700,
-													fontSize: "0.9rem",
-													letterSpacing: "1px",
-													color: "var(--text-dim)",
-												}}>
-												EMAIL
-											</th>
-											<th
-												style={{
-													padding: "16px 24px",
-													textAlign: "left",
-													fontWeight: 700,
-													fontSize: "0.9rem",
-													letterSpacing: "1px",
-													color: "var(--text-dim)",
-												}}>
-												CONTINGENT
-											</th>
-											<th
-												style={{
-													padding: "16px 24px",
-													textAlign: "left",
-													fontWeight: 700,
-													fontSize: "0.9rem",
-													letterSpacing: "1px",
-													color: "var(--text-dim)",
-												}}>
-												CATEGORY
-											</th>
-										</tr>
-									</thead>
-									<tbody>
-										{mockRegistrations.map((reg) => (
-											<tr
-												key={reg.id}
-												style={{ borderBottom: "1px solid var(--border)" }}>
-												<td
-													style={{
-														padding: "14px 24px",
-														color: "var(--text)",
-													}}>
-													{reg.name}
-												</td>
-												<td
-													style={{
-														padding: "14px 24px",
-														color: "var(--text-dim)",
-														fontSize: "0.9rem",
-													}}>
-													{reg.email}
-												</td>
-												<td style={{ padding: "14px 24px" }}>
-													<span
+													<div
 														style={{
-															display: "inline-block",
-															background: "rgba(232,194,106,0.15)",
-															color: "var(--gold)",
-															padding: "4px 12px",
-															borderRadius: "8px",
-															fontSize: "0.85rem",
-															fontWeight: 600,
+															display: "grid",
+															gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+															gap: "12px",
+															marginTop: "20px",
 														}}>
-														{reg.contingent}
-													</span>
-												</td>
-												<td
-													style={{
-														padding: "14px 24px",
-														color: "var(--text-dim)",
-													}}>
-													{reg.category}
-												</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
+														<button
+															type="button"
+															className="btn btn-gold"
+															disabled={isProcessing}
+															onClick={() =>
+																handleRegistrationDecision(
+																	registration,
+																	"accepted",
+																)
+															}
+															style={{
+																justifyContent: "center",
+																minHeight: "48px",
+																opacity: isProcessing ? 0.6 : 1,
+															}}>
+															✓ Accept
+														</button>
+
+														<button
+															type="button"
+															className="btn"
+															disabled={isProcessing}
+															onClick={() =>
+																handleRegistrationDecision(
+																	registration,
+																	"rejected",
+																)
+															}
+															style={{
+																justifyContent: "center",
+																minHeight: "48px",
+																border: "1px solid rgba(255,100,100,0.45)",
+																color: "#ff7777",
+																background: "rgba(255,100,100,0.07)",
+																opacity: isProcessing ? 0.6 : 1,
+															}}>
+															{isProcessing ? "Updating..." : "✕ Reject"}
+														</button>
+													</div>
+												</div>
+											</article>
+										);
+									})}
+								</div>
+							)}
 						</section>
-					</>
+					</section>
 				)}
 			</div>
-
 			<Footer />
 		</>
 	);
 }
+
+const inputStyle = {
+	width: "100%",
+	minHeight: "50px",
+	padding: "13px 15px",
+	boxSizing: "border-box" as const,
+	borderRadius: "11px",
+	border: "1px solid var(--border)",
+	background: "rgba(0,0,0,0.28)",
+	color: "var(--text)",
+	fontSize: "0.92rem",
+	fontFamily: "inherit",
+	outline: "none",
+};
+
+const detailCardStyle = {
+	padding: "13px 14px",
+	borderRadius: "12px",
+	border: "1px solid var(--border)",
+	background: "rgba(0,0,0,0.14)",
+	display: "flex",
+	flexDirection: "column" as const,
+	gap: "6px",
+};
+
+const detailLabelStyle = {
+	color: "var(--text-dim)",
+	fontSize: "0.68rem",
+	letterSpacing: "1.2px",
+	fontWeight: 700,
+};
+
+const detailValueStyle = {
+	color: "var(--text)",
+	fontSize: "0.9rem",
+	lineHeight: 1.35,
+};
+
+const tableHeaderStyle = {
+	padding: "16px 24px",
+	textAlign: "left" as const,
+	fontWeight: 700,
+	fontSize: "0.85rem",
+	letterSpacing: "1px",
+	color: "var(--text-dim)",
+};
+
+const tableCellStyle = {
+	padding: "14px 24px",
+	color: "var(--text)",
+};
