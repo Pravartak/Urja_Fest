@@ -29,70 +29,6 @@ type College = {
 	Events: Event[];
 };
 
-// const colleges: College[] = [
-// 	{
-// 		Id: "college-1",
-// 		ClCode: "COL001",
-// 		Name: "ABC College",
-// 		Events: [
-// 			{
-// 				Id: "event-1",
-// 				Name: "Tech Expo",
-// 				Teams: [
-// 					{ teamId: "Rahul Sharma" },
-// 					{ teamId: "Priya Patil" },
-// 				],
-// 			},
-// 			{
-// 				Id: "event-2",
-// 				Name: "Web Development",
-// 				Teams: [
-// 					{ teamId: "Aarav Kulkarni" },
-// 					{ teamId: "Sneha Joshi" },
-// 				],
-// 			},
-// 		],
-// 	},
-// 	{
-// 		Id: "college-2",
-// 		ClCode: "COL002",
-// 		Name: "XYZ College",
-// 		Events: [
-// 			{
-// 				Id: "event-3",
-// 				Name: "Tech Expo",
-// 				Teams: [
-// 					{ teamId: "Aditya More" },
-// 					{ teamId: "Riya Deshmukh" },
-// 				],
-// 			},
-// 			{
-// 				Id: "event-4",
-// 				Name: "Cultural Night",
-// 				Teams: [
-// 					{ teamId: "Omkar Jadhav" },
-// 					{ teamId: "Isha Shah" },
-// 				],
-// 			},
-// 		],
-// 	},
-// 	{
-// 		Id: "college-3",
-// 		ClCode: "COL003",
-// 		Name: "PQR College",
-// 		Events: [
-// 			{
-// 				Id: "event-5",
-// 				Name: "Sports Day",
-// 				Teams: [
-// 					{ teamId: "Vivek Pawar" },
-// 					{ teamId: "Neha Singh" },
-// 				],
-// 			},
-// 		],
-// 	},
-// ];
-
 const prizeOptions = [
 	{ value: "first", label: "First Place", points: 700 },
 	{ value: "second", label: "Second Place", points: 300 },
@@ -112,6 +48,7 @@ type PendingRegistration = {
 	teamMember2: string;
 	teamMember3: string;
 	teamMember4: string;
+	teamMember5: string;
 	paymentProofFileName: string | null;
 	paymentProofPath: string | null;
 	paymentProofUrl: string | null;
@@ -216,7 +153,7 @@ export default function Admin() {
 									teamMember2: data.teamMember2 ?? "",
 									teamMember3: data.teamMember3 ?? "",
 									teamMember4: data.teamMember4 ?? "",
-
+									teamMember5: data.teamMember5 ?? "",
 									paymentProofFileName: normalizedPaymentProofName,
 									paymentProofPath: data.paymentProofPath ?? null,
 									paymentProofUrl: data.paymentProofUrl ?? null,
@@ -331,6 +268,7 @@ export default function Admin() {
 				member2: registration.teamMember2,
 				member3: registration.teamMember3,
 				member4: registration.teamMember4,
+				member5: registration.teamMember5,
 				collegeId: registration.collegeId,
 				eventId: registration.eventId,
 				eventName: registration.eventName,
@@ -416,7 +354,7 @@ export default function Admin() {
 	const handleLogin = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 
-		if (password === "admin123") {
+		if (password === "crazyFrog") {
 			setIsLoggedIn(true);
 			setErrorMsg("");
 			return;
@@ -583,16 +521,6 @@ export default function Admin() {
 									}}>
 									Login
 								</button>
-
-								<p
-									style={{
-										marginTop: "24px",
-										color: "var(--text-dim)",
-										fontSize: "0.82rem",
-										textAlign: "center",
-									}}>
-									Demo password: admin123
-								</p>
 							</form>
 						</div>
 					</section>
