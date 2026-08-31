@@ -59,6 +59,9 @@ export default function Admin() {
 	const [selectedCollegeId, setSelectedCollegeId] = useState("");
 	const [selectedEventId, setSelectedEventId] = useState("");
 	const [selectedTeamId, setSelectedTeamId] = useState("");
+	const [teamMap, setTeamMap] = useState<
+		Record<string, { teamLeader: string }>
+	>({});
 	const [selectedTeamLeader, setSelectedTeamLeader] = useState("");
 	const [selectedPrize, setSelectedPrize] = useState("");
 	const [pointStatus, setPointStatus] = useState("");
@@ -139,14 +142,15 @@ export default function Admin() {
 										collegeData.CollegeName ??
 										collegeData.Name ??
 										"Unknown College",
-									collegeCode:
-										data.collegeCode ?? collegeData.ClCode ?? "",
+									collegeCode: data.collegeCode ?? collegeData.ClCode ?? "",
 
-									teamLeaderName: data.fullName ?? data.teamLeaderName ?? "Unknown",
+									teamLeaderName:
+										data.fullName ?? data.teamLeaderName ?? "Unknown",
 									contactNumber: data.contactNumber ?? "Not provided",
 
 									eventId: data.selectedEventId ?? data.eventId ?? "",
-									eventName: data.selectedEvent ?? data.eventName ?? "Unknown Event",
+									eventName:
+										data.selectedEvent ?? data.eventName ?? "Unknown Event",
 
 									selectedDay: data.selectedDay ?? "",
 
@@ -167,7 +171,10 @@ export default function Admin() {
 				const registrationsWithProofs = await Promise.all(
 					pending.map(async (registration) => {
 						if (registration.paymentProofUrl) return registration;
-						if (!registration.paymentProofPath && !registration.paymentProofFileName) {
+						if (
+							!registration.paymentProofPath &&
+							!registration.paymentProofFileName
+						) {
 							return registration;
 						}
 
@@ -198,30 +205,55 @@ export default function Admin() {
 			}
 		};
 
-		const fetchTeams = async () => {
-			if (!selectedTeamId) {
-				setSelectedTeamLeader("");
+		let cancelled = false;
+		async function loadTeams() {
+			if (!selectedCollegeId) {
+				setTeamMap({});
+				return;
+			}
+
+			const selectedCollegeData = collegesList.find(
+				(college) => college.Id === selectedCollegeId,
+			);
+			const teamIds =
+				selectedCollegeData?.Events?.flatMap((event) => event.Teams ?? []) ?? [];
+
+			if (!teamIds.length) {
+				setTeamMap({});
 				return;
 			}
 
 			try {
-				const teamRef = doc(db, "Teams", selectedTeamId);
-				const teamsnap = await getDoc(teamRef);
-				const teamData = teamsnap.data();
-				setSelectedTeamLeader(teamData?.teamLeader ?? "");
-			} catch (e) {
-				console.error("Failed to fetch team data:", e);
-				setSelectedTeamLeader("");
+				const teamDocs = await Promise.all(
+					teamIds.map((teamId) => getDoc(doc(db, "Teams", teamId))),
+				);
+
+				if (cancelled) return;
+
+				const map: Record<string, { teamLeader: string }> = {};
+				teamDocs.forEach((snap, idx) => {
+					if (!snap.exists()) return;
+					const data = snap.data();
+					map[teamIds[idx]] = {
+						teamLeader: data?.teamLeader ?? "",
+					};
+				});
+
+				setTeamMap(map);
+			} catch (err) {
+				console.error("Failed to load teams:", err);
+				setTeamMap({});
 			}
-		};
+		}
 
 		fetchPendingRegistrations();
-		fetchTeams();
+		loadTeams();
 
 		return () => {
 			active = false;
+			cancelled = true;
 		};
-	}, [isLoggedIn, selectedTeamId]);
+	}, [isLoggedIn, selectedCollegeId]);
 
 	const handleRegistrationDecision = async (
 		registration: PendingRegistration,
@@ -354,7 +386,7 @@ export default function Admin() {
 	const handleLogin = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 
-		if (password === "crazyFrog") {
+		if (password === process.env.ADMIN_PASS) {
 			setIsLoggedIn(true);
 			setErrorMsg("");
 			return;
@@ -676,9 +708,11 @@ export default function Admin() {
 											? "Select team leader"
 											: "Select event first"}
 									</option>
-									{availableTeams.map((team) => (
-										<option key={team} value={team}>
-											{selectedTeamLeader}
+									{availableTeams.map((teamId) => (
+										<option key={teamId} value={teamId}>
+											{teamMap[teamId]?.teamLeader
+												? `${teamMap[teamId].teamLeader}`
+												: teamId}
 										</option>
 									))}
 								</select>
