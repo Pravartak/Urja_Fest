@@ -24,6 +24,7 @@ type Event = {
 	Description?: string;
 	Venue: string;
 	Date_and_Time: string;
+	Fee?: string;
 };
 
 type College = {
@@ -95,6 +96,7 @@ export default function Register() {
 							Date_and_Time: formatEventDateTime(
 								data.Date_and_Time ?? data.Date,
 							),
+							Fee: data.Fee ?? "Not mentioned yet",
 						};
 					});
 
@@ -581,7 +583,9 @@ export default function Register() {
 											</option>
 											{getEventsForDay(formData.selectedDay).map((event) => (
 												<option key={event.Id} value={event.Id}>
-													{event.Name}
+													{event.Fee
+														? `${event.Name} - Fee: ${event.Fee}`
+														: event.Name}
 												</option>
 											))}
 										</select>

@@ -31,7 +31,7 @@ export default function Sponsors() {
                 Join us in making URJA 2026 an unforgettable experience. Contact us for partnership opportunities.
               </p>
               <p style={{ color: 'var(--text-dim)', marginTop: '20px', fontSize: '0.9rem' }}>
-                Email: info@urjafest.com
+                Contact: +91 9769315255
               </p>
             </div>
           </div>

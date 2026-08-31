@@ -57,13 +57,8 @@ type PendingRegistration = {
 export default function Admin() {
 	const [collegesList, setCollegesList] = useState<College[]>([]);
 	const [selectedCollegeId, setSelectedCollegeId] = useState("");
-	const [selectedEventId, setSelectedEventId] = useState("");
-	const [selectedTeamId, setSelectedTeamId] = useState("");
-	const [teamMap, setTeamMap] = useState<
-		Record<string, { teamLeader: string }>
-	>({});
-	const [selectedTeamLeader, setSelectedTeamLeader] = useState("");
-	const [selectedPrize, setSelectedPrize] = useState("");
+	const [pointReason, setPointReason] = useState("");
+	const [pointAdjustment, setPointAdjustment] = useState<string>("");
 	const [pointStatus, setPointStatus] = useState("");
 	const [pendingRegistrations, setPendingRegistrations] = useState<
 		PendingRegistration[]
@@ -80,20 +75,6 @@ export default function Admin() {
 
 	const selectedCollege = collegesList.find(
 		(college) => college.Id === selectedCollegeId,
-	);
-
-	const availableEvents = selectedCollege?.Events ?? [];
-
-	const selectedEvent = availableEvents.find(
-		(event, index) => `${event.Id}-${index}` === selectedEventId,
-	);
-
-	const availableTeams = selectedEvent?.Teams ?? [];
-
-	const selectedTeam = availableTeams.find((team) => team === selectedTeamId);
-
-	const selectedPrizeOption = prizeOptions.find(
-		(prize) => prize.value === selectedPrize,
 	);
 
 	useEffect(() => {
@@ -205,55 +186,12 @@ export default function Admin() {
 			}
 		};
 
-		let cancelled = false;
-		async function loadTeams() {
-			if (!selectedCollegeId) {
-				setTeamMap({});
-				return;
-			}
-
-			const selectedCollegeData = collegesList.find(
-				(college) => college.Id === selectedCollegeId,
-			);
-			const teamIds =
-				selectedCollegeData?.Events?.flatMap((event) => event.Teams ?? []) ?? [];
-
-			if (!teamIds.length) {
-				setTeamMap({});
-				return;
-			}
-
-			try {
-				const teamDocs = await Promise.all(
-					teamIds.map((teamId) => getDoc(doc(db, "Teams", teamId))),
-				);
-
-				if (cancelled) return;
-
-				const map: Record<string, { teamLeader: string }> = {};
-				teamDocs.forEach((snap, idx) => {
-					if (!snap.exists()) return;
-					const data = snap.data();
-					map[teamIds[idx]] = {
-						teamLeader: data?.teamLeader ?? "",
-					};
-				});
-
-				setTeamMap(map);
-			} catch (err) {
-				console.error("Failed to load teams:", err);
-				setTeamMap({});
-			}
-		}
-
 		fetchPendingRegistrations();
-		loadTeams();
 
 		return () => {
 			active = false;
-			cancelled = true;
 		};
-	}, [isLoggedIn, selectedCollegeId]);
+	}, [isLoggedIn]);
 
 	const handleRegistrationDecision = async (
 		registration: PendingRegistration,
@@ -405,42 +343,58 @@ export default function Admin() {
 	const handlePointsChange = async (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 
-		if (
-			!selectedCollege ||
-			!selectedEvent ||
-			!selectedTeam ||
-			!selectedPrizeOption
-		) {
-			setPointStatus("Please select a college, event, team, and prize.");
+		if (!selectedCollege) {
+			setPointStatus("Please select a college.");
 			return;
 		}
+
+		const trimmedReason = pointReason.trim();
+		const numericValue = Number(pointAdjustment);
+
+		if (!trimmedReason) {
+			setPointStatus("Please enter a reason for the PR point update.");
+			return;
+		}
+
+		if (!pointAdjustment || Number.isNaN(numericValue) || numericValue === 0) {
+			setPointStatus("Please enter a non-zero numeric PR point value.");
+			return;
+		}
+
 		setIsUpdating(true);
 
 		try {
 			const collegeRef = doc(db, "CollegeCreds", selectedCollege.Id);
+			const transactionRef = doc(collection(db, "prPointTransactions"));
 
 			const batch = writeBatch(db);
-
 			batch.update(collegeRef, {
-				PRPoints: increment(selectedPrizeOption.points),
+				PRPoints: increment(numericValue),
 			});
 			await batch.commit();
+
+			await setDoc(transactionRef, {
+				collegeId: selectedCollege.Id,
+				collegeCode: selectedCollege.ClCode ?? "",
+				collegeName: selectedCollege.Name,
+				reason: trimmedReason,
+				points: numericValue,
+				createdAt: new Date(),
+				updatedBy: "admin",
+			});
+
+			setPointStatus(
+				`${numericValue >= 0 ? "Added" : "Deducted"} ${Math.abs(numericValue)} PR Points for ${selectedCollege.Name}: ${trimmedReason}`,
+			);
 		} catch (e) {
-			console.error("Failed to fetch college data: ", e);
+			console.error("Failed to update college PR points: ", e);
+			setPointStatus("Could not update PR points. Check Firestore permissions and try again.");
 		} finally {
 			setIsUpdating(false);
+			setSelectedCollegeId("");
+			setPointReason("");
+			setPointAdjustment("");
 		}
-
-		if (!isUpdating) {
-			setPointStatus(
-				`${selectedPrizeOption.label} awarded to ${selectedTeamLeader} from ${selectedCollege.Name} for ${selectedEvent.Name} — ${selectedPrizeOption.points} PR Points.`,
-			);
-		}
-
-		setSelectedCollegeId("");
-		setSelectedEventId("");
-		setSelectedTeamId("");
-		setSelectedPrize("");
 	};
 
 	return (
@@ -640,9 +594,6 @@ export default function Admin() {
 									value={selectedCollegeId}
 									onChange={(event) => {
 										setSelectedCollegeId(event.target.value);
-										setSelectedEventId("");
-										setSelectedTeamId("");
-										setSelectedPrize("");
 										setPointStatus("");
 									}}
 									required
@@ -656,99 +607,43 @@ export default function Admin() {
 									))}
 								</select>
 
-								<select
-									value={selectedEventId}
+								<input
+									type="text"
+									value={pointReason}
 									onChange={(event) => {
-										setSelectedEventId(event.target.value);
-										setSelectedTeamId("");
-										setSelectedPrize("");
+										setPointReason(event.target.value);
 										setPointStatus("");
 									}}
-									disabled={!selectedCollegeId}
+									placeholder="Reason for updating PR Points"
 									required
-									aria-label="Select event"
 									style={{
 										...inputStyle,
-										opacity: selectedCollegeId ? 1 : 0.5,
-										cursor: selectedCollegeId ? "pointer" : "not-allowed",
-									}}>
-									<option value="">
-										{selectedCollegeId
-											? "Select event"
-											: "Select college first"}
-									</option>
-									{availableEvents.map((event, index) => {
-										const eventSelectionId = `${event.Id}-${index}`;
+									}}
+								/>
 
-										return (
-											<option key={eventSelectionId} value={eventSelectionId}>
-												{event.Name}
-											</option>
-										);
-									})}
-								</select>
-
-								<select
-									value={selectedTeamId}
+								<input
+									type="number"
+									step="1"
+									value={pointAdjustment}
 									onChange={(event) => {
-										setSelectedTeamId(event.target.value);
-										setSelectedPrize("");
+										setPointAdjustment(event.target.value);
 										setPointStatus("");
 									}}
-									disabled={!selectedEventId}
+									placeholder="e.g. 50 or -15"
 									required
-									aria-label="Select team leader"
 									style={{
 										...inputStyle,
-										opacity: selectedEventId ? 1 : 0.5,
-										cursor: selectedEventId ? "pointer" : "not-allowed",
-									}}>
-									<option value="">
-										{selectedEventId
-											? "Select team leader"
-											: "Select event first"}
-									</option>
-									{availableTeams.map((teamId) => (
-										<option key={teamId} value={teamId}>
-											{teamMap[teamId]?.teamLeader
-												? `${teamMap[teamId].teamLeader}`
-												: teamId}
-										</option>
-									))}
-								</select>
-
-								<select
-									value={selectedPrize}
-									onChange={(event) => {
-										setSelectedPrize(event.target.value);
-										setPointStatus("");
 									}}
-									disabled={!selectedTeamId}
-									required
-									aria-label="Select prize"
-									style={{
-										...inputStyle,
-										opacity: selectedTeamId ? 1 : 0.5,
-										cursor: selectedTeamId ? "pointer" : "not-allowed",
-									}}>
-									<option value="">
-										{selectedTeamId ? "Select prize" : "Select team first"}
-									</option>
-									{prizeOptions.map((prize) => (
-										<option key={prize.value} value={prize.value}>
-											{prize.label} — {prize.points} PR Points
-										</option>
-									))}
-								</select>
+								/>
 
 								<button
 									type="submit"
 									className="btn btn-purple-gradient"
 									disabled={
 										!selectedCollegeId ||
-										!selectedEventId ||
-										!selectedTeamId ||
-										!selectedPrize ||
+										!pointReason.trim() ||
+										!pointAdjustment ||
+										Number(pointAdjustment) === 0 ||
 										isUpdating
 									}
 									style={{
@@ -756,7 +651,7 @@ export default function Admin() {
 										justifyContent: "center",
 										gridColumn: "1 / -1",
 									}}>
-									Award PR Points
+									Update PR Points
 								</button>
 							</form>
 
