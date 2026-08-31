@@ -386,7 +386,7 @@ export default function Admin() {
 	const handleLogin = (event: FormEvent<HTMLFormElement>) => {
 		event.preventDefault();
 
-		if (password === process.env.NEXT_PUBLIC_ADMIN_PASS) {
+		if (password === process.env.ADMIN_PASS) {
 			setIsLoggedIn(true);
 			setErrorMsg("");
 			return;
