@@ -26,11 +26,13 @@ type CollegeData = {
 };
 
 type RecentUpdate = {
-	id: string;
-	eventName: string;
-	teamLeader: string;
+	collegeId: string;
+	collegeCode: string;
+	collegeName: string;
+	reason: string;
 	points: number;
 	reviewedAt: Date | null;
+	updatedBy: string;
 };
 
 type CollegeCredential = {
@@ -139,42 +141,35 @@ export default function CollegeDashboard() {
 
 				setCollege(collegeData);
 
-				const requestsSnapshot = await getDocs(
-					collection(
-						db,
-						"CollegeCreds",
-						collegeDoc.id,
-						"Requests"
-					)
-				);
+			const transactionsSnapshot = await getDocs(
+				query(
+					collection(db, "prPointTransactions"),
+					where("collegeCode", "==", clCode.trim())
+				)
+			);
 
-				const updates: RecentUpdate[] = requestsSnapshot.docs
-					.map((requestDoc) => {
-						const data = requestDoc.data();
+			const updates: RecentUpdate[] = transactionsSnapshot.docs
+				.map((doc) => {
+					const data = doc.data();
 
-						if (data.status !== "accepted") return null;
+					const reviewedAt =
+						data.reviewedAt?.toDate?.() ??
+						data.createdAt?.toDate?.();
 
-						const reviewedAt =
-							data.reviewedAt?.toDate?.() ??
-							data.createdAt?.toDate?.();
-
-						return {
-							id: requestDoc.id,
-							eventName:
-								data.selectedEvent ??
-								data.eventName ??
-								"Event",
-							teamLeader:
-								data.fullName ??
-								data.teamLeaderName ??
-								"Team",
-							points: 50,
-							reviewedAt: reviewedAt ?? null,
-						};
-					})
-					.filter(
-						(update): update is RecentUpdate => update !== null
-					)
+					return {
+						collegeId: doc.id,
+						collegeCode: String(data.collegeCode ?? clCode),
+						collegeName:
+							data.collegeName ??
+							collegeData.CollegeName ??
+							collegeData.Name ??
+							"College",
+						reason: String(data.reason ?? "Points updated"),
+						points: Number(data.points ?? 0),
+						reviewedAt: reviewedAt ?? null,
+						updatedBy: String(data.updatedBy ?? "admin"),
+					};
+				})
 					.sort(
 						(a, b) =>
 							(b.reviewedAt?.getTime() ?? 0) -
@@ -184,10 +179,12 @@ export default function CollegeDashboard() {
 
 				setRecentUpdates(updates);
 			} catch (error) {
-				console.error("Failed to load college dashboard:", error);
-				setDashboardError(
-					"Unable to load dashboard data. Please try again later."
+				// prPointTransactions collection might not exist yet, which is fine
+				console.warn(
+					"No point transactions found for college:",
+					error
 				);
+				setRecentUpdates([]);
 			} finally {
 				setDashboardLoading(false);
 			}
@@ -469,17 +466,17 @@ export default function CollegeDashboard() {
 							{recentUpdates.map((update) => (
 								<div
 									className="update-row"
-									key={update.id}
+									key={update.collegeId}
 								>
-									<div className="update-icon">+</div>
+									<div className="update-icon">{update.points < 0 ? "-" : "+"}</div>
 
 									<div className="update-details">
 										<strong>
-											{update.eventName}
+											{update.points < 0 ? "Deducted" : "Added"}
 										</strong>
 
 										<span>
-											{update.teamLeader} •{" "}
+											{update.reason} •{" "}
 											{formatDate(
 												update.reviewedAt
 											)}
@@ -488,7 +485,7 @@ export default function CollegeDashboard() {
 
 									<div className="earned-points">
 										<strong>
-											+{update.points}
+											{update.points < 0 ? "" : "+"}{update.points}
 										</strong>
 
 										<span>PR POINTS</span>

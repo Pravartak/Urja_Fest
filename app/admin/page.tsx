@@ -58,6 +58,7 @@ export default function Admin() {
 	const [collegesList, setCollegesList] = useState<College[]>([]);
 	const [selectedCollegeId, setSelectedCollegeId] = useState("");
 	const [pointReason, setPointReason] = useState("");
+	const [updatedBy, setUpdatedBy] = useState("");
 	const [pointAdjustment, setPointAdjustment] = useState<string>("");
 	const [pointStatus, setPointStatus] = useState("");
 	const [pendingRegistrations, setPendingRegistrations] = useState<
@@ -349,6 +350,7 @@ export default function Admin() {
 		}
 
 		const trimmedReason = pointReason.trim();
+		const trimmedUpdatedBy = updatedBy.trim();
 		const numericValue = Number(pointAdjustment);
 
 		if (!trimmedReason) {
@@ -380,7 +382,7 @@ export default function Admin() {
 				reason: trimmedReason,
 				points: numericValue,
 				createdAt: new Date(),
-				updatedBy: "admin",
+				updatedBy: trimmedUpdatedBy || "admin",
 			});
 
 			setPointStatus(
@@ -394,6 +396,7 @@ export default function Admin() {
 			setSelectedCollegeId("");
 			setPointReason("");
 			setPointAdjustment("");
+			setUpdatedBy("");
 		}
 	};
 
@@ -615,6 +618,20 @@ export default function Admin() {
 										setPointStatus("");
 									}}
 									placeholder="Reason for updating PR Points"
+									required
+									style={{
+										...inputStyle,
+									}}
+								/>
+
+								<input
+									type="text"
+									value={updatedBy}
+									onChange={(event) => {
+										setUpdatedBy(event.target.value);
+										setPointStatus("");
+									}}
+									placeholder="Updated by..."
 									required
 									style={{
 										...inputStyle,
