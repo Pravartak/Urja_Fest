@@ -472,7 +472,7 @@ export default function CollegeDashboard() {
 
 									<div className="update-details">
 										<strong>
-											{update.points < 0 ? "Deducted" : "Added"}
+											{update.points < 0 ? "Deducted by " : "Added by "}{update.updatedBy}
 										</strong>
 
 										<span>
