@@ -89,7 +89,6 @@ export default function LeaderboardPage() {
 									<div style={{ fontSize: "1.8rem" }}>🥈</div>
 
 									<h3>{podiumOrder[0].clCode}</h3>
-									<p>{podiumOrder[0].name}</p>
 
 									<div className="pts">{podiumOrder[0].points}</div>
 
@@ -109,7 +108,6 @@ export default function LeaderboardPage() {
 									<div style={{ fontSize: "1.8rem" }}>🏆</div>
 
 									<h3>{podiumOrder[1].clCode}</h3>
-									<p>{podiumOrder[1].name}</p>
 
 									<div className="pts">{podiumOrder[1].points}</div>
 
@@ -129,7 +127,6 @@ export default function LeaderboardPage() {
 									<div style={{ fontSize: "1.8rem" }}>🥉</div>
 
 									<h3>{podiumOrder[2].clCode}</h3>
-									<p>{podiumOrder[2].name}</p>
 									<div className="pts">{podiumOrder[2].points}</div>
 
 									<div
@@ -162,7 +159,7 @@ export default function LeaderboardPage() {
 
 										<div className="lb-bar-wrap">
 											<div className="lb-name">
-												{formatCollegeLabel(entry.clCode, entry.name)}
+												{entry.clCode}
 											</div>
 
 											<div
