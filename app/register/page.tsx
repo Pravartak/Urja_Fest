@@ -175,6 +175,14 @@ export default function Register() {
 			setFormData((prev) => ({
 				...prev,
 				[name]: type === "checkbox" ? checked : value,
+				...(name === "isSoloPlayer" && checked
+					? {
+							teamMember2: "",
+							teamMember3: "",
+							teamMember4: "",
+							teamMember5: "",
+						}
+					: {}),
 			}));
 			return;
 		}
@@ -267,10 +275,14 @@ export default function Register() {
 				selectedDay: registrationData.selectedDay,
 				selectedEvent: selectedEvent.Name,
 				selectedEventId: String(selectedEvent.Id),
-				teamMember2: registrationData.teamMember2,
-				teamMember3: registrationData.teamMember3,
-				teamMember4: registrationData.teamMember4,
-				teamMember5: registrationData.teamMember5,
+				...(registrationData.isSoloPlayer
+					? {}
+					: {
+							teamMember2: registrationData.teamMember2,
+							teamMember3: registrationData.teamMember3,
+							teamMember4: registrationData.teamMember4,
+							teamMember5: registrationData.teamMember5,
+						}),
 				paymentProofUrl,
 				paymentProofPath: uploadResult.ref.fullPath,
 				paymentProofName: safeFileName,
@@ -612,8 +624,98 @@ export default function Register() {
 									</label>
 								</div>
 
-								{!formData.isSoloPlayer && (
-									<>
+								<>
+									<div style={{ marginBottom: "24px" }}>
+										<label
+											style={{
+												display: "block",
+												marginBottom: "10px",
+												color: "var(--text-dim)",
+												fontSize: "0.8rem",
+												letterSpacing: "1.5px",
+											}}>
+											TEAM MEMBER 2 FULL NAME
+										</label>
+										<input
+											type="text"
+											name="teamMember2"
+											value={formData.teamMember2}
+											onChange={handleChange}
+											disabled={formData.isSoloPlayer}
+											placeholder="Full name of team member 2"
+											style={{
+												width: "100%",
+												borderRadius: "10px",
+												color: "var(--text)",
+												padding: "14px 16px",
+												border: "1px solid var(--border)",
+												background: "var(--input-bg)",
+												fontSize: "0.95rem",
+												fontFamily: "inherit",
+											}}
+										/>
+									</div>
+									<div style={{ marginBottom: "24px" }}>
+										<label
+											style={{
+												display: "block",
+												marginBottom: "10px",
+												color: "var(--text-dim)",
+												fontSize: "0.8rem",
+												letterSpacing: "1.5px",
+											}}>
+											TEAM MEMBER 3 FULL NAME
+										</label>
+										<input
+											type="text"
+											name="teamMember3"
+											value={formData.teamMember3}
+											onChange={handleChange}
+											disabled={formData.isSoloPlayer}
+											placeholder="Full name of team member 3"
+											style={{
+												width: "100%",
+												borderRadius: "10px",
+												color: "var(--text)",
+												padding: "14px 16px",
+												border: "1px solid var(--border)",
+												background: "var(--input-bg)",
+												fontSize: "0.95rem",
+												fontFamily: "inherit",
+											}}
+										/>
+									</div>
+									<div style={{ marginBottom: "24px" }}>
+										<label
+											style={{
+												display: "block",
+												marginBottom: "10px",
+												color: "var(--text-dim)",
+												fontSize: "0.8rem",
+												letterSpacing: "1.5px",
+											}}>
+											TEAM MEMBER 4 FULL NAME
+										</label>
+										<input
+											type="text"
+											name="teamMember4"
+											value={formData.teamMember4}
+											onChange={handleChange}
+											disabled={formData.isSoloPlayer}
+											placeholder="Full name of team member 4"
+											style={{
+												width: "100%",
+												borderRadius: "10px",
+												color: "var(--text)",
+												padding: "14px 16px",
+												border: "1px solid var(--border)",
+												background: "var(--input-bg)",
+												fontSize: "0.95rem",
+												fontFamily: "inherit",
+											}}
+										/>
+									</div>
+									{showTeamMember5 && (
 										<div style={{ marginBottom: "24px" }}>
 											<label
 												style={{
@@ -623,14 +725,15 @@ export default function Register() {
 													fontSize: "0.8rem",
 													letterSpacing: "1.5px",
 												}}>
-												TEAM MEMBER 2 FULL NAME
+												TEAM MEMBER 5 FULL NAME
 											</label>
 											<input
 												type="text"
-												name="teamMember2"
-												value={formData.teamMember2}
+												name="teamMember5"
+												value={formData.teamMember5}
 												onChange={handleChange}
-												placeholder="Full name of team member 2"
+												disabled={formData.isSoloPlayer}
+												placeholder="Full name of team member 5"
 												style={{
 													width: "100%",
 													borderRadius: "10px",
@@ -643,124 +746,35 @@ export default function Register() {
 												}}
 											/>
 										</div>
-										<div style={{ marginBottom: "24px" }}>
-											<label
-												style={{
-													display: "block",
-													marginBottom: "10px",
-													color: "var(--text-dim)",
-													fontSize: "0.8rem",
-													letterSpacing: "1.5px",
-												}}>
-												TEAM MEMBER 3 FULL NAME
-											</label>
-											<input
-												type="text"
-												name="teamMember3"
-												value={formData.teamMember3}
-												onChange={handleChange}
-												placeholder="Full name of team member 3"
-												style={{
-													width: "100%",
-													borderRadius: "10px",
-													color: "var(--text)",
-													padding: "14px 16px",
-													border: "1px solid var(--border)",
-													background: "var(--input-bg)",
-													fontSize: "0.95rem",
-													fontFamily: "inherit",
-												}}
-											/>
-										</div>
-										<div style={{ marginBottom: "24px" }}>
-											<label
-												style={{
-													display: "block",
-													marginBottom: "10px",
-													color: "var(--text-dim)",
-													fontSize: "0.8rem",
-													letterSpacing: "1.5px",
-												}}>
-												TEAM MEMBER 4 FULL NAME
-											</label>
-											<input
-												type="text"
-												name="teamMember4"
-												value={formData.teamMember4}
-												onChange={handleChange}
-												placeholder="Full name of team member 4"
-												style={{
-													width: "100%",
-													borderRadius: "10px",
-													color: "var(--text)",
-													padding: "14px 16px",
-													border: "1px solid var(--border)",
-													background: "var(--input-bg)",
-													fontSize: "0.95rem",
-													fontFamily: "inherit",
-												}}
-											/>
-										</div>
-										{showTeamMember5 && (
-											<div style={{ marginBottom: "24px" }}>
-												<label
-													style={{
-														display: "block",
-														marginBottom: "10px",
-														color: "var(--text-dim)",
-														fontSize: "0.8rem",
-														letterSpacing: "1.5px",
-													}}>
-													TEAM MEMBER 5 FULL NAME
-												</label>
-												<input
-													type="text"
-													name="teamMember5"
-													value={formData.teamMember5}
-													onChange={handleChange}
-													placeholder="Full name of team member 5"
-													style={{
-														width: "100%",
-														borderRadius: "10px",
-														color: "var(--text)",
-														padding: "14px 16px",
-														border: "1px solid var(--border)",
-														background: "var(--input-bg)",
-														fontSize: "0.95rem",
-														fontFamily: "inherit",
-													}}
-												/>
-											</div>
-										)}
-									</>
-								)}
+									)}
+								</>
 
-{formData.selectedEvent && (
-						<div style={{ marginBottom: "24px", textAlign: "center" }}>
-							<label
-								style={{
-									display: "block",
-									marginBottom: "10px",
-									color: "var(--text-dim)",
-									fontSize: "0.8rem",
-									letterSpacing: "1.5px",
-								}}>
-								PAYMENT QR CODE
-							</label>
-							<img
-								src={getQRCodeImage()}
-								alt="Payment QR Code"
-								style={{
-									maxWidth: "200px",
-									height: "auto",
-									borderRadius: "10px",
-									border: "1px solid var(--border)",
-									margin: "0 auto",
-									display: "block",
-								}}
-							/>
-						</div>
-					)}
+								{formData.selectedEvent && (
+									<div style={{ marginBottom: "24px", textAlign: "center" }}>
+										<label
+											style={{
+												display: "block",
+												marginBottom: "10px",
+												color: "var(--text-dim)",
+												fontSize: "0.8rem",
+												letterSpacing: "1.5px",
+											}}>
+											PAYMENT QR CODE
+										</label>
+										<img
+											src={getQRCodeImage()}
+											alt="Payment QR Code"
+											style={{
+												maxWidth: "200px",
+												height: "auto",
+												borderRadius: "10px",
+												border: "1px solid var(--border)",
+												margin: "0 auto",
+												display: "block",
+											}}
+										/>
+									</div>
+								)}
 
 								<div style={{ marginBottom: "32px" }}>
 									<label

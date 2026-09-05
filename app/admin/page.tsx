@@ -58,7 +58,8 @@ export default function Admin() {
 	const [collegesList, setCollegesList] = useState<College[]>([]);
 	const [selectedCollegeId, setSelectedCollegeId] = useState("");
 	const [pointReason, setPointReason] = useState("");
-	const [updatedBy, setUpdatedBy] = useState("");
+	const [updatedBy, setUpdatedBy] = useState(""); // For custom point updator
+	const [addedBy, setAddedBy] = useState(""); // For Registration acceptor
 	const [pointAdjustment, setPointAdjustment] = useState<string>("");
 	const [pointStatus, setPointStatus] = useState("");
 	const [pendingRegistrations, setPendingRegistrations] = useState<
@@ -230,6 +231,13 @@ export default function Admin() {
 			// ACCEPT
 			// --------------------------------------------------
 
+			const addedByTrimmed = addedBy.trim();
+			if (!addedByTrimmed) {
+				const updatedBy = document.getElementById("updatedBy") as HTMLInputElement;
+				updatedBy.placeholder = "Please enter your name...";
+				return;
+			};
+
 			// 1. Create Team first
 			const teamRef = doc(collection(db, "Teams"));
 			const teamId = teamRef.id;
@@ -248,6 +256,8 @@ export default function Admin() {
 
 			// 2. Now read existing Events
 			const collegeRef = doc(db, "CollegeCreds", registration.collegeId);
+			const transactionRef = doc(collection(db, "prPointTransactions"));
+
 			const collegeSnapshot = await getDoc(collegeRef);
 			const collegeData = collegeSnapshot.data();
 
@@ -298,6 +308,16 @@ export default function Admin() {
 				status: "accepted",
 				reviewedAt: new Date(),
 				teamId: teamId,
+			});
+
+			await setDoc(transactionRef, {
+				collegeId: registration.collegeId,
+				collegeCode: registration.collegeCode,
+				collegeName: registration.collegeName,
+				reason: "Event registration points",
+				points: 50,
+				createdAt: new Date(),
+				updatedBy: addedByTrimmed || "admin",
 			});
 
 			await batch.commit();
@@ -390,7 +410,9 @@ export default function Admin() {
 			);
 		} catch (e) {
 			console.error("Failed to update college PR points: ", e);
-			setPointStatus("Could not update PR points. Check Firestore permissions and try again.");
+			setPointStatus(
+				"Could not update PR points. Check Firestore permissions and try again.",
+			);
 		} finally {
 			setIsUpdating(false);
 			setSelectedCollegeId("");
@@ -976,6 +998,22 @@ export default function Admin() {
 															)}
 														</div>
 													</div>
+
+													<input
+														id="updatedBy"
+														type="text"
+														value={addedBy}
+														onChange={(event) => {
+															setAddedBy(event.target.value);
+															setPointStatus("");
+														}}
+														placeholder="Updated by..."
+														required
+														style={{
+															...inputStyle,
+															marginTop: "18px",
+														}}
+													/>
 
 													<div
 														style={{

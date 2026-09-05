@@ -174,8 +174,7 @@ export default function CollegeDashboard() {
 						(a, b) =>
 							(b.reviewedAt?.getTime() ?? 0) -
 							(a.reviewedAt?.getTime() ?? 0)
-					)
-					.slice(0, 5);
+					);
 
 				setRecentUpdates(updates);
 			} catch (error) {
@@ -225,10 +224,10 @@ export default function CollegeDashboard() {
 
 				<div className="passport-container">
 					<div className="passport-card">
-						<h1 className="passport-title">College Dashboard</h1>
+						<h1 className="passport-title">CC Dashboard</h1>
 
 						<p className="passport-subtitle">
-							Enter your College Code and Password
+							Enter your CC Code and Password
 						</p>
 
 						<form
@@ -240,7 +239,7 @@ export default function CollegeDashboard() {
 									htmlFor="clCode"
 									className="form-label"
 								>
-									Cl Code
+									CC Code
 								</label>
 
 								<input
@@ -250,7 +249,7 @@ export default function CollegeDashboard() {
 									onChange={(e) =>
 										setClCode(e.target.value)
 									}
-									placeholder="Enter your Cl Code"
+									placeholder="Enter your CC Code"
 									className="form-input"
 									autoComplete="username"
 									required
@@ -385,7 +384,7 @@ export default function CollegeDashboard() {
 
 						<div className="stat-content">
 							<span className="stat-label">
-								TOTAL PARTICIPANTS
+								TOTAL TEAMS
 							</span>
 
 							<strong className="stat-value">

@@ -28,8 +28,8 @@ export default function Footer() {
           <h4>Connect</h4>
           <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
             Follow us on Instagram<br />
-            <a style={{ color: 'var(--gold)' }} href="https://www.instagram.com/bakliwal_.computerassociation">
-              @bakliwal_.computerassociation
+            <a style={{ color: 'var(--gold)' }} href="https://www.instagram.com/bakliwal_urja?utm_source=ig_web_button_share_sheet&igsi=ZDNlZDc0MzIxNw==">
+              @bakliwal_urja
             </a>
           </p>
         </div>
