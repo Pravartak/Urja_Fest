@@ -26,14 +26,11 @@ type College = {
 	Id: string;
 	ClCode: string;
 	Name: string;
+	PRPoints: number;
+	Password: string;
+	Teams: number;
 	Events: Event[];
 };
-
-const prizeOptions = [
-	{ value: "first", label: "First Place", points: 700 },
-	{ value: "second", label: "Second Place", points: 300 },
-	{ value: "third", label: "Third Place", points: 250 },
-];
 
 type PendingRegistration = {
 	id: string;
@@ -62,6 +59,15 @@ export default function Admin() {
 	const [addedBy, setAddedBy] = useState(""); // For Registration acceptor
 	const [pointAdjustment, setPointAdjustment] = useState<string>("");
 	const [pointStatus, setPointStatus] = useState("");
+	const [newCollege, setNewCollege] = useState({
+		ClCode: "",
+		Name: "",
+		PRPoints: "",
+		Password: "",
+		Teams: "",
+	});
+	const [collegeStatus, setCollegeStatus] = useState("");
+	const [isAddingCollege, setIsAddingCollege] = useState(false);
 	const [pendingRegistrations, setPendingRegistrations] = useState<
 		PendingRegistration[]
 	>([]);
@@ -422,6 +428,68 @@ export default function Admin() {
 		}
 	};
 
+	const handleAddCollege = async (event: FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		setCollegeStatus("");
+
+		const clCode = newCollege.ClCode.trim();
+		const name = newCollege.Name.trim();
+		const password = newCollege.Password.trim();
+		const prPoints = Number(newCollege.PRPoints);
+		const teams = Number(newCollege.Teams);
+
+		if (
+			!clCode ||
+			!name ||
+			!password ||
+			newCollege.PRPoints === "" ||
+			newCollege.Teams === "" ||
+			Number.isNaN(prPoints) ||
+			Number.isNaN(teams)
+		) {
+			setCollegeStatus("Please complete every college field with valid values.");
+			return;
+		}
+
+		setIsAddingCollege(true);
+
+		try {
+			const collegeRef = doc(collection(db, "CollegeCreds"));
+			await setDoc(collegeRef, {
+				Id: collegeRef.id,
+				ClCode: clCode,
+				Name: name,
+				PRPoints: prPoints,
+				Password: password,
+				Teams: teams,
+				Events: [],
+				createdAt: new Date(),
+			});
+
+			setCollegesList((current) => [
+				...current,
+				{
+					Id: collegeRef.id,
+					ClCode: clCode,
+					Name: name,
+					PRPoints: prPoints,
+					Password: password,
+					Teams: teams,
+					Events: [],
+				},
+			]);
+			setCollegeStatus(`${name} was added successfully.`);
+			setNewCollege({ ClCode: "", Name: "", PRPoints: "", Password: "", Teams: "" });
+		} catch (addError) {
+			console.error("Failed to add college:", addError);
+			setCollegeStatus(
+				"Could not add the college. Check Firestore permissions and try again.",
+			);
+		} finally {
+			setIsAddingCollege(false);
+		}
+	};
+
 	return (
 		<>
 			<div className="cosmic-bg" />
@@ -587,6 +655,110 @@ export default function Admin() {
 								<div className="admin-stat-value">{collegesList.length}</div>
 							</div>
 						</div>
+
+						<section
+							className="admin-points-panel"
+							style={{
+								padding: "32px",
+								marginBottom: "60px",
+								borderRadius: "20px",
+								border: "1px solid var(--border)",
+								background:
+									"linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))",
+								boxShadow: "0 20px 60px rgba(0,0,0,0.18)",
+							}}>
+							<div style={{ marginBottom: "28px" }}>
+								<p className="eyebrow">COLLEGE MANAGEMENT</p>
+								<h2 className="basic-heading">Add a new college</h2>
+								<p className="admin-points-help">
+									Create college credentials and starting values for the dashboard.
+								</p>
+							</div>
+
+							<form
+								className="admin-points-form"
+								onSubmit={handleAddCollege}
+								style={{
+									display: "grid",
+									gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+									gap: "16px",
+								}}>
+								<input
+									value={newCollege.ClCode}
+									onChange={(event) =>
+										setNewCollege({ ...newCollege, ClCode: event.target.value })
+									}
+									placeholder="ClCode"
+									required
+									style={inputStyle}
+								/>
+								<input
+									value={newCollege.Name}
+									onChange={(event) =>
+										setNewCollege({ ...newCollege, Name: event.target.value })
+									}
+									placeholder="Name"
+									required
+									style={inputStyle}
+								/>
+								<input
+									type="number"
+									value={newCollege.PRPoints}
+									onChange={(event) =>
+										setNewCollege({ ...newCollege, PRPoints: event.target.value })
+									}
+									placeholder="PRPoints"
+									required
+									style={inputStyle}
+								/>
+								<input
+									type="password"
+									value={newCollege.Password}
+									onChange={(event) =>
+										setNewCollege({ ...newCollege, Password: event.target.value })
+									}
+									placeholder="Password"
+									required
+									style={inputStyle}
+								/>
+								<input
+									type="number"
+									value={newCollege.Teams}
+									onChange={(event) =>
+										setNewCollege({ ...newCollege, Teams: event.target.value })
+									}
+									placeholder="Teams"
+									required
+									style={inputStyle}
+								/>
+								<button
+									type="submit"
+									className="btn btn-purple-gradient"
+									disabled={isAddingCollege}
+									style={{
+										minHeight: "50px",
+										justifyContent: "center",
+										gridColumn: "1 / -1",
+									}}>
+									{isAddingCollege ? "Adding college..." : "Add College"}
+								</button>
+							</form>
+
+							{collegeStatus && (
+								<p
+									className="admin-points-status"
+									style={{
+										marginTop: "18px",
+										padding: "12px 16px",
+										borderRadius: "10px",
+										background: "rgba(232,194,106,0.08)",
+										border: "1px solid rgba(232,194,106,0.2)",
+										color: "var(--gold)",
+									}}>
+									{collegeStatus}
+								</p>
+							)}
+						</section>
 
 						<section
 							className="admin-points-panel"
