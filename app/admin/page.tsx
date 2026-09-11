@@ -688,7 +688,7 @@ export default function Admin() {
 									onChange={(event) =>
 										setNewCollege({ ...newCollege, ClCode: event.target.value })
 									}
-									placeholder="ClCode"
+									placeholder="CC Code"
 									required
 									style={inputStyle}
 								/>

@@ -27,6 +27,12 @@ type Event = {
 	Fee?: string;
 };
 
+type EventCategory = {
+	Id: number | string;
+	Name: string;
+	Events: Event[];
+};
+
 type College = {
 	id: string;
 	ClCode: string;
@@ -45,7 +51,7 @@ const eventDays = [
 
 export default function Register() {
 	const [colleges, setColleges] = useState<College[]>([]);
-	const [day1Events, setDay1Events] = useState<Event[]>([]);
+	const [day1Categories, setDay1Categories] = useState<EventCategory[]>([]);
 	const [day2Events, setDay2Events] = useState<Event[]>([]);
 	const [day4Events, setDay4Events] = useState<Event[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -59,6 +65,7 @@ export default function Register() {
 		contactNumber: "",
 		emailId: "",
 		selectedDay: "",
+		selectedCategory: "",
 		selectedEvent: "",
 		selectedEventId: "",
 		collegeId: "",
@@ -85,20 +92,41 @@ export default function Register() {
 						getDocs(collection(db, "Day4")),
 					]);
 
-				const mapEvents = (snapshot: typeof day1Snapshot): Event[] =>
+				const mapEvent = (eventData: unknown, fallbackId: string): Event => {
+					const data = (eventData ?? {}) as Partial<Event> & {
+						Date?: unknown;
+						Date_and_Time?: unknown;
+					};
+
+					return {
+						Id: data.Id ?? fallbackId,
+						Name: data.Name ?? "Untitled event",
+						Description: data.Description,
+						Venue: data.Venue ?? "Venue to be announced",
+						Date_and_Time: formatEventDateTime(data.Date_and_Time ?? data.Date),
+						Fee: data.Fee ?? "Not mentioned yet",
+					};
+				};
+
+				const mapEvents = (snapshot: typeof day2Snapshot): Event[] =>
 					snapshot.docs.map((eventDoc) => {
-						const data = eventDoc.data();
-						return {
-							Id: data.Id ?? eventDoc.id,
-							Name: data.Name ?? "Untitled event",
-							Description: data.Description,
-							Venue: data.Venue ?? "Venue to be announced",
-							Date_and_Time: formatEventDateTime(
-								data.Date_and_Time ?? data.Date,
-							),
-							Fee: data.Fee ?? "Not mentioned yet",
-						};
+						return mapEvent(eventDoc.data(), eventDoc.id);
 					});
+
+				const day1Categories = day1Snapshot.docs.map((categoryDoc) => {
+					const data = categoryDoc.data();
+					const events = Array.isArray(data.Events)
+						? data.Events.map((event, index) =>
+								mapEvent(event, `${categoryDoc.id}-${index}`),
+							)
+						: [];
+
+					return {
+						Id: data.Id ?? categoryDoc.id,
+						Name: data.Name ?? "Untitled category",
+						Events: events,
+					};
+				});
 
 				const nextColleges = collegeSnapshot.docs.map((collegeDoc) => ({
 					id: collegeDoc.id,
@@ -108,7 +136,7 @@ export default function Register() {
 				if (!active) return;
 
 				setColleges(nextColleges);
-				setDay1Events(mapEvents(day1Snapshot));
+				setDay1Categories(day1Categories);
 				setDay2Events(mapEvents(day2Snapshot));
 				setDay4Events(mapEvents(day4Snapshot));
 				setError(null);
@@ -135,7 +163,11 @@ export default function Register() {
 	const getEventsForDay = (day: string): Event[] => {
 		switch (day) {
 			case "Day 1":
-				return day1Events;
+				return (
+					day1Categories.find(
+						(category) => String(category.Id) === formData.selectedCategory,
+					)?.Events ?? []
+				);
 			case "Day 2":
 				return day2Events;
 			case "Day 4":
@@ -192,8 +224,16 @@ export default function Register() {
 			...prev,
 			[name]: value,
 			...(name === "selectedDay"
-				? { selectedEvent: "", selectedEventId: "" }
-				: {}),
+				? {
+						selectedCategory: "",
+						selectedEvent: "",
+						selectedEventId: "",
+					}
+				: name === "selectedCategory"
+					? { selectedEvent: "", selectedEventId: "" }
+					: name === "selectedEvent"
+						? { selectedEventId: value }
+						: {}),
 		}));
 
 		// Show teamMember5 input only if selected event is "HackHive Hackathon"
@@ -273,6 +313,9 @@ export default function Register() {
 				contactNumber: registrationData.contactNumber,
 				emailId: registrationData.emailId,
 				selectedDay: registrationData.selectedDay,
+				...(registrationData.selectedDay === "Day 1"
+					? { selectedCategory: registrationData.selectedCategory }
+					: {}),
 				selectedEvent: selectedEvent.Name,
 				selectedEventId: String(selectedEvent.Id),
 				...(registrationData.isSoloPlayer
@@ -301,6 +344,7 @@ export default function Register() {
 					contactNumber: "",
 					emailId: "",
 					selectedDay: "",
+					selectedCategory: "",
 					selectedEvent: "",
 					selectedEventId: "",
 					collegeId: "",
@@ -553,6 +597,54 @@ export default function Register() {
 										))}
 									</select>
 								</div>
+
+								{formData.selectedDay === "Day 1" && (
+									<div style={{ marginBottom: "24px" }}>
+										<label
+											style={{
+												display: "block",
+												marginBottom: "10px",
+												color: "var(--text-dim)",
+												fontSize: "0.8rem",
+												letterSpacing: "1.5px",
+											}}>
+											SELECT CATEGORY
+										</label>
+										<select
+											name="selectedCategory"
+											value={formData.selectedCategory}
+											onChange={handleChange}
+											required
+											disabled={
+												loading || Boolean(error) || day1Categories.length === 0
+											}
+											style={{
+												width: "100%",
+												borderRadius: "10px",
+												color: "var(--text)",
+												padding: "14px 16px",
+												border: "1px solid var(--border)",
+												background: "var(--input-bg)",
+												fontSize: "0.95rem",
+												fontFamily: "inherit",
+											}}>
+											<option value="">
+												{loading
+													? "Loading categories..."
+													: error
+														? "Categories unavailable"
+														: day1Categories.length === 0
+															? "No categories available"
+															: "Select a category"}
+											</option>
+											{day1Categories.map((category) => (
+												<option key={category.Id} value={category.Id}>
+													{category.Name}
+												</option>
+											))}
+										</select>
+									</div>
+								)}
 
 								{formData.selectedDay && (
 									<div style={{ marginBottom: "24px" }}>

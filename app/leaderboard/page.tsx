@@ -54,8 +54,6 @@ export default function LeaderboardPage() {
 	].filter(Boolean);
 
 	const maxPoints = sortedLeaderboard[0]?.points || 1;
-	const formatCollegeLabel = (clCode: string, name: string) =>
-		name ? `${clCode} • ${name}` : clCode;
 
 	return (
 		<div className="page-wrap" data-page="leaderboard">
