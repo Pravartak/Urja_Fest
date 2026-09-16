@@ -209,7 +209,7 @@ img {
 .hackhive-saturn {
   position: absolute;
   z-index: 1;
-  inset: -18px -24px;
+  inset: -23px -32px;
   pointer-events: none;
   filter: drop-shadow(0 0 8px rgba(232, 194, 106, 0.55));
 }

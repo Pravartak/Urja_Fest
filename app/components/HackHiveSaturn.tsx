@@ -9,20 +9,23 @@ function SaturnScene() {
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
-    groupRef.current.rotation.z += delta * 0.08
-    groupRef.current.rotation.y += delta * 0.12
+    groupRef.current.rotation.x += delta * 0.14
   })
 
   return (
-    <group ref={groupRef} rotation={[0.28, -0.45, -0.2]}>
-      <group scale={[1.7, 0.72, 1]}>
-        <mesh rotation={[0.15, 0, 0]}>
-          <torusGeometry args={[0.68, 0.07, 12, 96]} />
-          <meshStandardMaterial color="#f2ca78" roughness={0.62} metalness={0.28} transparent opacity={0.9} />
+    <group ref={groupRef} rotation={[0.2, 0, 0]}>
+      <group scale={[1.78, 0.64, 1]}>
+        <mesh>
+          <torusGeometry args={[0.7, 0.045, 16, 128]} />
+          <meshStandardMaterial color="#ffe0a0" roughness={0.42} metalness={0.42} transparent opacity={0.92} />
         </mesh>
-        <mesh rotation={[0.15, 0, 0]}>
-          <torusGeometry args={[0.84, 0.025, 10, 96]} />
-          <meshStandardMaterial color="#d98d68" roughness={0.7} metalness={0.2} transparent opacity={0.72} />
+        <mesh>
+          <torusGeometry args={[0.78, 0.028, 12, 128]} />
+          <meshStandardMaterial color="#b87561" roughness={0.65} metalness={0.3} transparent opacity={0.7} />
+        </mesh>
+        <mesh>
+          <torusGeometry args={[0.88, 0.018, 10, 128]} />
+          <meshStandardMaterial color="#f3c982" roughness={0.5} metalness={0.36} transparent opacity={0.62} />
         </mesh>
       </group>
     </group>
