@@ -9,7 +9,7 @@ function SaturnScene() {
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
-    groupRef.current.rotation.x += delta * 0.14
+    groupRef.current.rotation.y += delta * 0.14
   })
 
   return (
