@@ -19,14 +19,16 @@ function SaturnScene() {
         <sphereGeometry args={[0.46, 32, 32]} />
         <meshStandardMaterial color="#d7a75b" roughness={0.72} metalness={0.18} emissive="#4a2417" emissiveIntensity={0.16} />
       </mesh>
-      <mesh rotation={[0.15, 0, 0]}>
-        <torusGeometry args={[0.68, 0.07, 12, 96]} />
-        <meshStandardMaterial color="#f2ca78" roughness={0.62} metalness={0.28} transparent opacity={0.9} />
-      </mesh>
-      <mesh rotation={[0.15, 0, 0]}>
-        <torusGeometry args={[0.84, 0.025, 10, 96]} />
-        <meshStandardMaterial color="#d98d68" roughness={0.7} metalness={0.2} transparent opacity={0.72} />
-      </mesh>
+      <group scale={[1.7, 0.72, 1]}>
+        <mesh rotation={[0.15, 0, 0]}>
+          <torusGeometry args={[0.68, 0.07, 12, 96]} />
+          <meshStandardMaterial color="#f2ca78" roughness={0.62} metalness={0.28} transparent opacity={0.9} />
+        </mesh>
+        <mesh rotation={[0.15, 0, 0]}>
+          <torusGeometry args={[0.84, 0.025, 10, 96]} />
+          <meshStandardMaterial color="#d98d68" roughness={0.7} metalness={0.2} transparent opacity={0.72} />
+        </mesh>
+      </group>
     </group>
   )
 }

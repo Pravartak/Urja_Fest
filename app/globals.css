@@ -157,13 +157,18 @@ img {
   align-items: center;
   min-height: 40px;
   margin-left: 4px;
-  padding: 9px 17px 9px 43px;
+  padding: 9px 17px;
   overflow: visible;
   color: #ffe8ad;
   border: 1px solid rgba(232, 194, 106, 0.78);
   background: linear-gradient(135deg, rgba(48, 22, 84, 0.9), rgba(13, 7, 35, 0.96));
   box-shadow: inset 0 0 14px rgba(169, 112, 255, 0.12), 0 0 14px rgba(123, 63, 228, 0.22);
   transition: color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.nav-links a.hackhive-link > span:last-child {
+  position: relative;
+  z-index: 2;
 }
 
 .nav-links a.hackhive-link::before,
@@ -204,12 +209,8 @@ img {
 .hackhive-saturn {
   position: absolute;
   z-index: 1;
-  left: -9px;
-  top: 50%;
-  width: 54px;
-  height: 54px;
+  inset: -18px -24px;
   pointer-events: none;
-  transform: translateY(-50%);
   filter: drop-shadow(0 0 8px rgba(232, 194, 106, 0.55));
 }
 
