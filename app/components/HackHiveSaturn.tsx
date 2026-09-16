@@ -15,10 +15,6 @@ function SaturnScene() {
 
   return (
     <group ref={groupRef} rotation={[0.28, -0.45, -0.2]}>
-      <mesh>
-        <sphereGeometry args={[0.46, 32, 32]} />
-        <meshStandardMaterial color="#d7a75b" roughness={0.72} metalness={0.18} emissive="#4a2417" emissiveIntensity={0.16} />
-      </mesh>
       <group scale={[1.7, 0.72, 1]}>
         <mesh rotation={[0.15, 0, 0]}>
           <torusGeometry args={[0.68, 0.07, 12, 96]} />
