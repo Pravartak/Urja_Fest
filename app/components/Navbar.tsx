@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import HackHiveSaturn from './HackHiveSaturn'
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -40,6 +41,10 @@ export default function Navbar() {
         </Link>
         <Link href="/sponsors" className={isActive('/sponsors')}>
           SPONSORS
+        </Link>
+        <Link href="/hackhive" className={`hackhive-link ${isActive('/hackhive')}`}>
+          <HackHiveSaturn />
+          <span>HACKHIVE</span>
         </Link>
         <Link href="/passport" className={`passport ${isActive('/passport')}`}>
           CC PASSPORT
