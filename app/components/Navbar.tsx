@@ -1,9 +1,13 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import HackHiveSaturn from "./HackHiveSaturn";
+
+const HackHiveSaturn = dynamic(() => import("./HackHiveSaturn"), {
+	ssr: false,
+});
 
 export default function Navbar() {
 	const pathname = usePathname();
