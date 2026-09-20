@@ -651,6 +651,15 @@ img {
   padding: 150px 24px 60px;
 }
 
+.register-hero.hackhive-registration-hero {
+  padding: 56px 24px 24px;
+}
+
+.hackhive-registration-board {
+  width: min(100%, 520px) !important;
+  margin: 0 auto;
+}
+
 .events-grid {
   display: grid;
   gap: 24px;

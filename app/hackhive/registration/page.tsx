@@ -1,560 +1,799 @@
 "use client";
 
-import { useRef } from "react";
-import * as THREE from "three";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { useEffect, useState } from "react";
+// import Navbar from "../components/Navbar";
+import Footer from "../../components/Footer";
+import { formatEventDateTime } from "../../events/page";
+import { db, storage } from "@/lib/firebase";
 import {
-  Environment,
-  Float,
-  Html,
-  OrbitControls,
-  RoundedBox,
-  Text,
-} from "@react-three/drei";
-
-/* =========================================================
-   Types
-========================================================= */
-
-interface CircuitBoardHeaderProps {
-  displayText?: string;
-}
-
-/* =========================================================
-   PCB BASE
-========================================================= */
-
-function PCB() {
-  return (
-    <group>
-      {/* Main board */}
-      <RoundedBox
-        args={[8.5, 0.28, 4.8]}
-        radius={0.18}
-        smoothness={4}
-        position={[0, -0.35, 0]}
-      >
-        <meshStandardMaterial
-          color="#050a0d"
-          roughness={0.72}
-          metalness={0.35}
-        />
-      </RoundedBox>
-
-      {/* Thin blue board edge */}
-      <RoundedBox
-        args={[8.58, 0.08, 4.88]}
-        radius={0.2}
-        smoothness={4}
-        position={[0, -0.18, 0]}
-      >
-        <meshStandardMaterial
-          color="#0878c9"
-          emissive="#0055aa"
-          emissiveIntensity={0.8}
-          roughness={0.5}
-          metalness={0.65}
-        />
-      </RoundedBox>
-
-      {/* Inner board surface */}
-      <RoundedBox
-        args={[8.25, 0.08, 4.55]}
-        radius={0.16}
-        smoothness={4}
-        position={[0, -0.18, 0]}
-      >
-        <meshStandardMaterial
-          color="#071217"
-          roughness={0.8}
-          metalness={0.25}
-        />
-      </RoundedBox>
-    </group>
-  );
-}
-
-/* =========================================================
-   CIRCUIT TRACE
-========================================================= */
-
-interface TraceProps {
-  points: [number, number][];
-}
-
-function Trace({ points }: TraceProps) {
-  const curve = new THREE.CatmullRomCurve3(
-    points.map(([x, z]) => new THREE.Vector3(x, -0.08, z))
-  );
-
-  const geometry = new THREE.TubeGeometry(
-    curve,
-    Math.max(8, points.length * 5),
-    0.025,
-    5,
-    false
-  );
-
-  return (
-    <group>
-      <mesh geometry={geometry}>
-        <meshStandardMaterial
-          color="#168fe5"
-          emissive="#087bd0"
-          emissiveIntensity={1.8}
-          metalness={0.4}
-          roughness={0.4}
-        />
-      </mesh>
-
-      {points.map(([x, z], index) => (
-        <mesh key={index} position={[x, -0.015, z]}>
-          <sphereGeometry args={[0.075, 10, 10]} />
-          <meshStandardMaterial
-            color="#9ee8ff"
-            emissive="#37bfff"
-            emissiveIntensity={4}
-          />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-/* =========================================================
-   CIRCUIT TRACES
-========================================================= */
-
-function CircuitTraces() {
-  const traces: [number, number][][] = [
-    [
-      [-3.8, -1.7],
-      [-3.1, -1.7],
-      [-2.7, -1.25],
-      [-1.8, -1.25],
-    ],
-
-    [
-      [-3.9, 1.3],
-      [-3.2, 1.3],
-      [-2.8, 0.85],
-      [-2.1, 0.85],
-    ],
-
-    [
-      [3.9, -1.5],
-      [3.15, -1.5],
-      [2.8, -1.1],
-      [2.0, -1.1],
-    ],
-
-    [
-      [3.95, 1.45],
-      [3.25, 1.45],
-      [2.8, 0.9],
-      [2.0, 0.9],
-    ],
-
-    [
-      [-1.8, 1.9],
-      [-1.25, 1.9],
-      [-0.9, 1.45],
-      [0, 1.45],
-    ],
-
-    [
-      [0.2, -1.9],
-      [0.85, -1.9],
-      [1.2, -1.5],
-      [2.0, -1.5],
-    ],
-  ];
-
-  return (
-    <group>
-      {traces.map((points, index) => (
-        <Trace key={index} points={points} />
-      ))}
-    </group>
-  );
-}
-
-/* =========================================================
-   CHIP
-========================================================= */
-
-interface ChipProps {
-  position: [number, number, number];
-  scale?: number;
-}
-
-function Chip({ position, scale = 1 }: ChipProps) {
-  return (
-    <group position={position} scale={scale}>
-      {/* Chip body */}
-      <RoundedBox
-        args={[0.8, 0.15, 0.7]}
-        radius={0.06}
-        smoothness={3}
-      >
-        <meshStandardMaterial
-          color="#111b20"
-          roughness={0.55}
-          metalness={0.65}
-        />
-      </RoundedBox>
-
-      {/* Chip center */}
-      <mesh position={[0, 0.09, 0]}>
-        <boxGeometry args={[0.42, 0.035, 0.32]} />
-        <meshStandardMaterial
-          color="#061015"
-          emissive="#064d78"
-          emissiveIntensity={1}
-        />
-      </mesh>
-
-      {/* Pins */}
-      {[-0.24, -0.08, 0.08, 0.24].map((x) => (
-        <group key={`x-${x}`}>
-          <mesh position={[x, 0.02, 0.42]}>
-            <boxGeometry args={[0.06, 0.07, 0.28]} />
-            <meshStandardMaterial
-              color="#7b8b91"
-              metalness={0.9}
-              roughness={0.25}
-            />
-          </mesh>
-
-          <mesh position={[x, 0.02, -0.42]}>
-            <boxGeometry args={[0.06, 0.07, 0.28]} />
-            <meshStandardMaterial
-              color="#7b8b91"
-              metalness={0.9}
-              roughness={0.25}
-            />
-          </mesh>
-        </group>
-      ))}
-
-      {[-0.22, -0.07, 0.08, 0.23].map((z) => (
-        <group key={`z-${z}`}>
-          <mesh position={[0.47, 0.02, z]}>
-            <boxGeometry args={[0.28, 0.07, 0.06]} />
-            <meshStandardMaterial
-              color="#7b8b91"
-              metalness={0.9}
-              roughness={0.25}
-            />
-          </mesh>
-
-          <mesh position={[-0.47, 0.02, z]}>
-            <boxGeometry args={[0.28, 0.07, 0.06]} />
-            <meshStandardMaterial
-              color="#7b8b91"
-              metalness={0.9}
-              roughness={0.25}
-            />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  );
-}
-
-/* =========================================================
-   LED
-========================================================= */
-
-function LED({
-  position,
-  color = "#29bfff",
-}: {
-  position: [number, number, number];
-  color?: string;
-}) {
-  const ref = useRef<THREE.Mesh>(null);
-
-  useFrame(({ clock }) => {
-    if (!ref.current) return;
-
-    const pulse =
-      1.5 + Math.sin(clock.getElapsedTime() * 4.5) * 0.7;
-
-    const material = ref.current.material as THREE.MeshStandardMaterial;
-
-    material.emissiveIntensity = pulse;
-  });
-
-  return (
-    <mesh ref={ref} position={position}>
-      <sphereGeometry args={[0.075, 12, 12]} />
-
-      <meshStandardMaterial
-        color={color}
-        emissive={color}
-        emissiveIntensity={2}
-        toneMapped={false}
-      />
-    </mesh>
-  );
-}
-
-/* =========================================================
-   DISPLAY
-========================================================= */
-
-function Display({ text }: { text: string }) {
-  return (
-    <group position={[0, 0.12, 0]}>
-      {/* Display housing */}
-      <RoundedBox
-        args={[3.9, 0.22, 1.55]}
-        radius={0.12}
-        smoothness={5}
-      >
-        <meshStandardMaterial
-          color="#10191e"
-          roughness={0.35}
-          metalness={0.75}
-        />
-      </RoundedBox>
-
-      {/* Blue outer frame */}
-      <RoundedBox
-        args={[3.55, 0.08, 1.2]}
-        radius={0.08}
-        smoothness={4}
-        position={[0, 0.13, 0]}
-      >
-        <meshStandardMaterial
-          color="#06344e"
-          emissive="#0879b8"
-          emissiveIntensity={1.3}
-          roughness={0.35}
-          metalness={0.5}
-        />
-      </RoundedBox>
-
-      {/* Screen */}
-      <RoundedBox
-        args={[3.35, 0.045, 1.02]}
-        radius={0.06}
-        smoothness={4}
-        position={[0, 0.18, 0]}
-      >
-        <meshStandardMaterial
-          color="#02090d"
-          emissive="#062d45"
-          emissiveIntensity={1.2}
-          roughness={0.35}
-        />
-      </RoundedBox>
-
-      {/* Display text */}
-      <Text
-        position={[0, 0.23, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={0.52}
-        maxWidth={3}
-        anchorX="center"
-        anchorY="middle"
-        color="#b9efff"
-        outlineWidth={0.025}
-        outlineColor="#087fc4"
-      >
-        {text.toUpperCase()}
-      </Text>
-
-      {/* Tiny display LEDs */}
-      <LED position={[-1.55, 0.25, -0.55]} />
-      <LED position={[1.55, 0.25, -0.55]} color="#167fff" />
-    </group>
-  );
-}
-
-/* =========================================================
-   RESISTOR
-========================================================= */
-
-function Resistor({
-  position,
-  rotation = [0, 0, 0],
-}: {
-  position: [number, number, number];
-  rotation?: [number, number, number];
-}) {
-  return (
-    <group position={position} rotation={rotation}>
-      {/* Body */}
-      <mesh>
-        <cylinderGeometry args={[0.12, 0.12, 0.55, 10]} />
-        <meshStandardMaterial
-          color="#aeb9bd"
-          metalness={0.7}
-          roughness={0.3}
-        />
-      </mesh>
-
-      {/* Leads */}
-      <mesh position={[0, 0.4, 0]}>
-        <cylinderGeometry args={[0.025, 0.025, 0.3, 6]} />
-        <meshStandardMaterial
-          color="#87969c"
-          metalness={0.8}
-        />
-      </mesh>
-
-      <mesh position={[0, -0.4, 0]}>
-        <cylinderGeometry args={[0.025, 0.025, 0.3, 6]} />
-        <meshStandardMaterial
-          color="#87969c"
-          metalness={0.8}
-        />
-      </mesh>
-
-      {/* Bands */}
-      {[-0.13, 0, 0.13].map((y, index) => (
-        <mesh key={index} position={[0, y, 0]}>
-          <torusGeometry args={[0.122, 0.018, 6, 12]} />
-          <meshStandardMaterial
-            color="#168bd0"
-            emissive="#0872ae"
-            emissiveIntensity={0.7}
-          />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-/* =========================================================
-   BOARD CONTENT
-========================================================= */
-
-function BoardContents({ displayText }: { displayText: string }) {
-  return (
-    <group>
-      <CircuitTraces />
-
-      {/* Chips */}
-      <Chip position={[-2.9, 0, 1.35]} scale={0.8} />
-      <Chip position={[2.9, 0, 1.35]} scale={0.8} />
-      <Chip position={[-2.9, 0, -1.25]} scale={0.72} />
-      <Chip position={[2.9, 0, -1.25]} scale={0.72} />
-
-      {/* Resistors */}
-      <Resistor
-        position={[-1.8, 0.02, 1.8]}
-        rotation={[Math.PI / 2, 0, 0]}
-      />
-
-      <Resistor
-        position={[1.75, 0.02, 1.75]}
-        rotation={[Math.PI / 2, 0, 0]}
-      />
-
-      {/* LEDs */}
-      <LED position={[-3.65, 0.08, -0.4]} />
-      <LED position={[3.65, 0.08, -0.35]} color="#218cff" />
-
-      {/* Main display */}
-      <Display text={displayText} />
-    </group>
-  );
-}
-
-/* =========================================================
-   WHOLE BOARD
-========================================================= */
-
-function CircuitBoard({ displayText }: { displayText: string }) {
-  const groupRef = useRef<THREE.Group>(null);
-
-  useFrame(({ pointer }) => {
-    if (!groupRef.current) return;
-
-    const targetRotationY = pointer.x * 0.08;
-    const targetRotationX = -pointer.y * 0.05;
-
-    groupRef.current.rotation.y = THREE.MathUtils.lerp(
-      groupRef.current.rotation.y,
-      targetRotationY,
-      0.05
-    );
-
-    groupRef.current.rotation.x = THREE.MathUtils.lerp(
-      groupRef.current.rotation.x,
-      targetRotationX,
-      0.05
-    );
-  });
-
-  return (
-    <group ref={groupRef} rotation={[-0.08, 0, 0]}>
-      <PCB />
-
-      <Float
-        speed={1.2}
-        rotationIntensity={0.05}
-        floatIntensity={0.12}
-      >
-        <BoardContents displayText={displayText} />
-      </Float>
-    </group>
-  );
-}
-
-/* =========================================================
-   MAIN COMPONENT
-========================================================= */
-
-export default function CircuitBoardHeader({
-  displayText = "REGISTER",
-}: CircuitBoardHeaderProps) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "430px",
-        position: "relative",
-      }}
-    >
-      <Canvas
-        camera={{
-          position: [0, 5.7, 7.5],
-          fov: 42,
-        }}
-        dpr={[1, 1.75]}
-        gl={{
-          antialias: true,
-          alpha: true,
-        }}
-      >
-        <ambientLight intensity={0.35} />
-
-        <directionalLight
-          position={[3, 6, 4]}
-          intensity={2}
-        />
-
-        <pointLight
-          position={[0, 2, 1]}
-          color="#149ee8"
-          intensity={25}
-          distance={8}
-        />
-
-        <CircuitBoard displayText={displayText} />
-
-        <Environment preset="night" />
-
-        <OrbitControls
-          enableZoom={false}
-          enablePan={false}
-          enableRotate={false}
-        />
-      </Canvas>
-    </div>
-  );
+	collection,
+	doc,
+	getDocs,
+	serverTimestamp,
+	writeBatch,
+} from "firebase/firestore";
+import {
+	getDownloadURL,
+	ref as storageRef,
+	uploadBytes,
+} from "firebase/storage";
+import LcdBoard from "@/app/components/CircuitBoard";
+
+type Event = {
+	Id: number | string;
+	Name: string;
+	Description?: string;
+	Venue: string;
+	Date_and_Time: string;
+	Fee?: string;
+};
+
+type College = {
+	id: string;
+	ClCode: string;
+	Name: string;
+	PRPoints: number;
+	Password: string;
+	Teams: number;
+};
+
+	const HACKHIVE_EVENT_NAME = "HackHive Hackathon";
+
+export default function Register() {
+	const [colleges, setColleges] = useState<College[]>([]);
+	const [day2Events, setDay2Events] = useState<Event[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+	const [submitError, setSubmitError] = useState<string | null>(null);
+	const [submitting, setSubmitting] = useState(false);
+	const [showTeamMember5, setShowTeamMember5] = useState(false);
+
+	const [formData, setFormData] = useState({
+		fullName: "",
+		contactNumber: "",
+		emailId: "",
+		selectedDay: "Day 2",
+		selectedCategory: "",
+		selectedEvent: "",
+		selectedEventId: "",
+		collegeId: "",
+		isSoloPlayer: false,
+		teamMember2: "",
+		teamMember3: "",
+		teamMember4: "",
+		teamMember5: "",
+		paymentProof: null as File | null,
+	});
+
+	const [submitted, setSubmitted] = useState(false);
+
+	useEffect(() => {
+		let active = true;
+
+		const fetchRegistrationData = async () => {
+			try {
+				const [collegeSnapshot, day2Snapshot] =
+					await Promise.all([
+						getDocs(collection(db, "CollegeCreds")),
+						getDocs(collection(db, "Day2")),
+					]);
+
+				const mapEvent = (eventData: unknown, fallbackId: string): Event => {
+					const data = (eventData ?? {}) as Partial<Event> & {
+						Date?: unknown;
+						Date_and_Time?: unknown;
+					};
+
+					return {
+						Id: data.Id ?? fallbackId,
+						Name: data.Name ?? "Untitled event",
+						Description: data.Description,
+						Venue: data.Venue ?? "Venue to be announced",
+						Date_and_Time: formatEventDateTime(data.Date_and_Time ?? data.Date),
+						Fee: data.Fee ?? "Not mentioned yet",
+					};
+				};
+
+				const mapEvents = (snapshot: typeof day2Snapshot): Event[] =>
+					snapshot.docs.map((eventDoc) => {
+						return mapEvent(eventDoc.data(), eventDoc.id);
+					});
+
+				const nextColleges = collegeSnapshot.docs.map((collegeDoc) => ({
+					id: collegeDoc.id,
+					...collegeDoc.data(),
+				})) as College[];
+
+				if (!active) return;
+
+				setColleges(nextColleges);
+				const hackHiveEvents = mapEvents(day2Snapshot).filter(
+					(event) => event.Name === HACKHIVE_EVENT_NAME,
+				);
+				setDay2Events(hackHiveEvents);
+				setFormData((prev) => ({
+					...prev,
+					selectedDay: "Day 2",
+					selectedEvent: hackHiveEvents[0]
+						? String(hackHiveEvents[0].Id)
+						: "",
+					selectedEventId: hackHiveEvents[0]
+						? String(hackHiveEvents[0].Id)
+						: "",
+				}));
+				setShowTeamMember5(true);
+				setError(null);
+			} catch (fetchError) {
+				console.error("Failed to fetch registration data: ", fetchError);
+
+				if (active) {
+					setError(
+						"Registration data is currently unavailable. Please try again later.",
+					);
+				}
+			} finally {
+				if (active) setLoading(false);
+			}
+		};
+
+		fetchRegistrationData();
+
+		return () => {
+			active = false;
+		};
+	}, []);
+
+	const getEventsForDay = (day: string): Event[] => {
+		return day === "Day 2" ? day2Events : [];
+	};
+
+	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		if (e.target.files && e.target.files[0]) {
+			setFormData((prev) => ({ ...prev, paymentProof: e.target.files![0] }));
+		}
+	};
+
+	const getQRCodeImage = (): string => {
+		const events = getEventsForDay(formData.selectedDay);
+		const selectedEvent = events.find(
+			(e) => String(e.Id) === formData.selectedEvent,
+		);
+
+		// Return different QR code based on selected event
+		if (selectedEvent?.Name === "HackHive Hackathon") {
+			return "/Hackathon_QR.jpeg"; // HackHive QR code
+		}
+
+		return "/Other_QR.jpeg"; // Default QR code for other events
+	};
+
+	const handleChange = (
+		e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+	) => {
+		const target = e.target;
+
+		if (target instanceof HTMLInputElement) {
+			const { name, type, checked, value } = target;
+			setFormData((prev) => ({
+				...prev,
+				[name]: type === "checkbox" ? checked : value,
+				...(name === "isSoloPlayer" && checked
+					? {
+							teamMember2: "",
+							teamMember3: "",
+							teamMember4: "",
+							teamMember5: "",
+						}
+					: {}),
+			}));
+			return;
+		}
+
+		const { name, value } = target;
+		setFormData((prev) => ({
+			...prev,
+			[name]: value,
+			...(name === "selectedDay"
+				? {
+						selectedCategory: "",
+						selectedEvent: "",
+						selectedEventId: "",
+					}
+				: name === "selectedCategory"
+					? { selectedEvent: "", selectedEventId: "" }
+					: name === "selectedEvent"
+						? { selectedEventId: value }
+						: {}),
+		}));
+
+		// Show teamMember5 input only if selected event is "HackHive Hackathon"
+		if (name === "selectedEvent") {
+			const event = getEventsForDay(formData.selectedDay).find(
+				(e) => String(e.Id) === value,
+			);
+			if (event?.Name === "HackHive Hackathon") {
+				setShowTeamMember5(true);
+			} else {
+				setShowTeamMember5(false);
+			}
+		} else if (name === "selectedDay") {
+			// Reset teamMember5 visibility when day changes
+			setShowTeamMember5(false);
+		}
+	};
+
+	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+
+		if (!formData.paymentProof) {
+			setSubmitError("Please upload your payment proof image.");
+			return;
+		}
+
+		const selectedCollege = colleges.find(
+			(college) => college.id === formData.collegeId,
+		);
+
+		if (!selectedCollege) {
+			setSubmitError("Please select the college you will represent.");
+			return;
+		}
+
+		const selectedEvent = getEventsForDay(formData.selectedDay).find(
+			(event) => String(event.Id) === formData.selectedEvent,
+		);
+
+		if (!selectedEvent || selectedEvent.Name !== HACKHIVE_EVENT_NAME) {
+			setSubmitError("HackHive Hackathon is the only available event.");
+			return;
+		}
+
+		setSubmitError(null);
+		setSubmitting(true);
+
+		try {
+			const requestRef = doc(
+				collection(db, "CollegeCreds", selectedCollege.id, "Requests"),
+			);
+			const safeFileName = formData.paymentProof.name.replace(/\s+/g, "_");
+			const paymentProofRef = storageRef(
+				storage,
+				`payment-proofs/${selectedCollege.id}/${requestRef.id}-${safeFileName}`,
+			);
+			console.log("Payment proof:", {
+				name: formData.paymentProof.name,
+				type: formData.paymentProof.type,
+				size: formData.paymentProof.size,
+				sizeMB: (formData.paymentProof.size / (1024 * 1024)).toFixed(2),
+			});
+			const uploadResult = await uploadBytes(
+				paymentProofRef,
+				formData.paymentProof,
+			);
+			const paymentProofUrl = await getDownloadURL(uploadResult.ref);
+			const batch = writeBatch(db);
+			const { paymentProof, ...registrationData } = formData;
+
+			batch.set(requestRef, {
+				id: requestRef.id,
+				collegeId: selectedCollege.id,
+				collegeName: selectedCollege.Name,
+				collegeCode: selectedCollege.ClCode,
+				fullName: registrationData.fullName,
+				contactNumber: registrationData.contactNumber,
+				emailId: registrationData.emailId,
+				selectedDay: registrationData.selectedDay,
+				...(registrationData.selectedDay === "Day 1"
+					? { selectedCategory: registrationData.selectedCategory }
+					: {}),
+				selectedEvent: selectedEvent.Name,
+				selectedEventId: String(selectedEvent.Id),
+				...(registrationData.isSoloPlayer
+					? {}
+					: {
+							teamMember2: registrationData.teamMember2,
+							teamMember3: registrationData.teamMember3,
+							teamMember4: registrationData.teamMember4,
+							teamMember5: registrationData.teamMember5,
+						}),
+				paymentProofUrl,
+				paymentProofPath: uploadResult.ref.fullPath,
+				paymentProofName: safeFileName,
+				paymentProofType: paymentProof.type,
+				paymentProofSize: paymentProof.size,
+				status: "pending",
+				createdAt: serverTimestamp(),
+			});
+
+			await batch.commit();
+			setSubmitted(true);
+
+			setTimeout(() => {
+				setFormData({
+					fullName: "",
+					contactNumber: "",
+					emailId: "",
+					selectedDay: "Day 2",
+					selectedCategory: "",
+					selectedEvent: day2Events[0] ? String(day2Events[0].Id) : "",
+					selectedEventId: day2Events[0] ? String(day2Events[0].Id) : "",
+					collegeId: "",
+					isSoloPlayer: false,
+					teamMember2: "",
+					teamMember3: "",
+					teamMember4: "",
+					teamMember5: "",
+					paymentProof: null,
+				});
+				setShowTeamMember5(true);
+				setSubmitted(false);
+			}, 3000);
+		} catch (error) {
+			console.error("🔥 REGISTRATION FAILED:", error);
+
+			if (error instanceof Error) {
+				console.error("Message:", error.message);
+				console.error("Name:", error.name);
+			}
+
+			setSubmitError(
+				error instanceof Error
+					? error.message
+					: "Registration could not be submitted.",
+			);
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	return (
+		<>
+			<div className="cosmic-bg" />
+			<div className="cosmic-vignette" />
+			<div className="page-wrap">
+				<section className="register-hero hackhive-registration-hero">
+					<LcdBoard
+						text="Register"
+						align="center"
+						className="hackhive-registration-board"
+					/>
+				</section>
+
+				<section className="section">
+					<div style={{ maxWidth: "600px", margin: "0 auto" }}>
+						{submitted ? (
+							<div
+								style={{
+									background: "rgba(80, 220, 140, 0.15)",
+									border: "1px solid rgba(80, 220, 140, 0.5)",
+									borderRadius: "18px",
+									padding: "40px",
+									textAlign: "center",
+								}}>
+								<div style={{ fontSize: "3rem", marginBottom: "20px" }}>✅</div>
+								<h3
+									style={{
+										fontSize: "1.5rem",
+										marginBottom: "10px",
+										color: "var(--gold)",
+									}}>
+									Registration Successful!
+								</h3>
+								<p style={{ color: "var(--text-dim)" }}>
+									Welcome to URJA 2026! Your registration details have been sent
+									for approval.
+								</p>
+							</div>
+						) : (
+							<form
+								onSubmit={handleSubmit}
+								style={{
+									background: "var(--card)",
+									border: "1px solid var(--border)",
+									borderRadius: "18px",
+									padding: "40px",
+								}}>
+								<div style={{ marginBottom: "24px" }}>
+									<label
+										style={{
+											display: "block",
+											marginBottom: "10px",
+											color: "var(--text-dim)",
+											fontSize: "0.8rem",
+											letterSpacing: "1.5px",
+										}}>
+										YOUR FULL NAME (TEAM LEADER)
+									</label>
+									<input
+										type="text"
+										name="fullName"
+										value={formData.fullName}
+										onChange={handleChange}
+										required
+										placeholder="Your full name"
+										style={{
+											width: "100%",
+											borderRadius: "10px",
+											color: "var(--text)",
+											padding: "14px 16px",
+											border: "1px solid var(--border)",
+											background: "var(--input-bg)",
+											fontSize: "0.95rem",
+											fontFamily: "inherit",
+										}}
+									/>
+								</div>
+
+								<div style={{ marginBottom: "24px" }}>
+									<label
+										style={{
+											display: "block",
+											marginBottom: "10px",
+											color: "var(--text-dim)", // Changed from --text-dim
+											fontSize: "0.8rem", // Changed from 0.75rem
+											letterSpacing: "1.5px",
+										}}>
+										YOUR EMAIL ID
+									</label>
+									<input
+										type="email"
+										name="emailId"
+										value={formData.emailId}
+										onChange={handleChange}
+										required
+										placeholder="your@email.com"
+										style={{
+											width: "100%",
+											borderRadius: "10px",
+											color: "var(--text)",
+											padding: "14px 16px",
+											border: "1px solid var(--border)",
+											background: "var(--input-bg)",
+											fontSize: "0.95rem",
+											fontFamily: "inherit",
+										}}
+									/>
+								</div>
+
+								<div style={{ marginBottom: "24px" }}>
+									<label
+										style={{
+											display: "block",
+											marginBottom: "10px",
+											color: "var(--text-dim)",
+											fontSize: "0.8rem",
+											letterSpacing: "1.5px",
+										}}>
+										COLLEGE YOU WILL REPRESENT
+									</label>
+									<select
+										name="collegeId"
+										value={formData.collegeId}
+										onChange={handleChange}
+										required
+										disabled={loading || colleges.length === 0}
+										style={{
+											width: "100%",
+											borderRadius: "10px",
+											color: "var(--text)",
+											padding: "14px 16px",
+											border: "1px solid var(--border)",
+											background: "var(--input-bg)",
+											fontSize: "0.95rem",
+											fontFamily: "inherit",
+										}}>
+										<option value="">
+											{loading
+												? "Loading colleges..."
+												: error
+													? "Colleges unavailable"
+													: colleges.length === 0
+														? "No colleges available"
+														: "Select your college"}
+										</option>
+										{colleges.map((college) => (
+											<option key={college.id} value={college.id}>
+												{college.Name ?? college.ClCode ?? college.id}
+												{college.ClCode ? ` (${college.ClCode})` : ""}
+											</option>
+										))}
+									</select>
+								</div>
+
+								<div style={{ marginBottom: "24px" }}>
+									<label
+										style={{
+											display: "block",
+											marginBottom: "10px",
+											color: "var(--text-dim)", // Changed from --text-dim
+											fontSize: "0.8rem", // Changed from 0.75rem
+											letterSpacing: "1.5px",
+										}}>
+										YOUR CONTACT NUMBER
+									</label>
+									<input
+										type="tel"
+										name="contactNumber"
+										value={formData.contactNumber}
+										onChange={handleChange}
+										required
+										placeholder="+91 XXXXXXXXXX"
+										style={{
+											width: "100%",
+											borderRadius: "10px",
+											color: "var(--text)",
+											padding: "14px 16px",
+											border: "1px solid var(--border)",
+											background: "var(--input-bg)",
+											fontSize: "0.95rem",
+											fontFamily: "inherit",
+										}}
+									/>
+								</div>
+								<div style={{ marginBottom: "24px" }}>
+									<label
+										style={{
+											display: "block",
+											marginBottom: "10px",
+											color: "var(--text-dim)",
+											fontSize: "0.8rem",
+											letterSpacing: "1.5px",
+										}}>
+										EVENT
+									</label>
+									<div
+										style={{
+											width: "100%",
+											borderRadius: "10px",
+											color: "var(--text)",
+											padding: "14px 16px",
+											border: "1px solid var(--border)",
+											background: "var(--input-bg)",
+											fontSize: "0.95rem",
+										}}>
+										{loading
+											? "Loading HackHive Hackathon..."
+											: error
+												? "HackHive Hackathon unavailable"
+												: "HackHive Hackathon"}
+									</div>
+								</div>
+
+								<div style={{ marginBottom: "24px" }}>
+									<label
+										style={{
+											display: "flex",
+											alignItems: "center",
+											color: "var(--text-dim)",
+											fontSize: "0.8rem",
+											letterSpacing: "1.5px",
+										}}>
+										<input
+											type="checkbox"
+											name="isSoloPlayer"
+											checked={formData.isSoloPlayer}
+											onChange={handleChange}
+											style={{ marginRight: "10px" }}
+										/>
+										SOLO PLAYER
+									</label>
+								</div>
+
+								<>
+									<div style={{ marginBottom: "24px" }}>
+										<label
+											style={{
+												display: "block",
+												marginBottom: "10px",
+												color: "var(--text-dim)",
+												fontSize: "0.8rem",
+												letterSpacing: "1.5px",
+											}}>
+											TEAM MEMBER 2 FULL NAME
+										</label>
+										<input
+											type="text"
+											name="teamMember2"
+											value={formData.teamMember2}
+											onChange={handleChange}
+											disabled={formData.isSoloPlayer}
+											placeholder="Full name of team member 2"
+											style={{
+												width: "100%",
+												borderRadius: "10px",
+												color: "var(--text)",
+												padding: "14px 16px",
+												border: "1px solid var(--border)",
+												background: "var(--input-bg)",
+												fontSize: "0.95rem",
+												fontFamily: "inherit",
+											}}
+										/>
+									</div>
+									<div style={{ marginBottom: "24px" }}>
+										<label
+											style={{
+												display: "block",
+												marginBottom: "10px",
+												color: "var(--text-dim)",
+												fontSize: "0.8rem",
+												letterSpacing: "1.5px",
+											}}>
+											TEAM MEMBER 3 FULL NAME
+										</label>
+										<input
+											type="text"
+											name="teamMember3"
+											value={formData.teamMember3}
+											onChange={handleChange}
+											disabled={formData.isSoloPlayer}
+											placeholder="Full name of team member 3"
+											style={{
+												width: "100%",
+												borderRadius: "10px",
+												color: "var(--text)",
+												padding: "14px 16px",
+												border: "1px solid var(--border)",
+												background: "var(--input-bg)",
+												fontSize: "0.95rem",
+												fontFamily: "inherit",
+											}}
+										/>
+									</div>
+									<div style={{ marginBottom: "24px" }}>
+										<label
+											style={{
+												display: "block",
+												marginBottom: "10px",
+												color: "var(--text-dim)",
+												fontSize: "0.8rem",
+												letterSpacing: "1.5px",
+											}}>
+											TEAM MEMBER 4 FULL NAME
+										</label>
+										<input
+											type="text"
+											name="teamMember4"
+											value={formData.teamMember4}
+											onChange={handleChange}
+											disabled={formData.isSoloPlayer}
+											placeholder="Full name of team member 4"
+											style={{
+												width: "100%",
+												borderRadius: "10px",
+												color: "var(--text)",
+												padding: "14px 16px",
+												border: "1px solid var(--border)",
+												background: "var(--input-bg)",
+												fontSize: "0.95rem",
+												fontFamily: "inherit",
+											}}
+										/>
+									</div>
+									{showTeamMember5 && (
+										<div style={{ marginBottom: "24px" }}>
+											<label
+												style={{
+													display: "block",
+													marginBottom: "10px",
+													color: "var(--text-dim)",
+													fontSize: "0.8rem",
+													letterSpacing: "1.5px",
+												}}>
+												TEAM MEMBER 5 FULL NAME
+											</label>
+											<input
+												type="text"
+												name="teamMember5"
+												value={formData.teamMember5}
+												onChange={handleChange}
+												disabled={formData.isSoloPlayer}
+												placeholder="Full name of team member 5"
+												style={{
+													width: "100%",
+													borderRadius: "10px",
+													color: "var(--text)",
+													padding: "14px 16px",
+													border: "1px solid var(--border)",
+													background: "var(--input-bg)",
+													fontSize: "0.95rem",
+													fontFamily: "inherit",
+												}}
+											/>
+										</div>
+									)}
+								</>
+
+								{formData.selectedEvent && (
+									<div style={{ marginBottom: "24px", textAlign: "center" }}>
+										<label
+											style={{
+												display: "block",
+												marginBottom: "10px",
+												color: "var(--text-dim)",
+												fontSize: "0.8rem",
+												letterSpacing: "1.5px",
+											}}>
+											PAYMENT QR CODE
+										</label>
+										<img
+											src={getQRCodeImage()}
+											alt="Payment QR Code"
+											style={{
+												maxWidth: "200px",
+												height: "auto",
+												borderRadius: "10px",
+												border: "1px solid var(--border)",
+												margin: "0 auto",
+												display: "block",
+											}}
+										/>
+									</div>
+								)}
+
+								<div style={{ marginBottom: "32px" }}>
+									<label
+										style={{
+											display: "block",
+											marginBottom: "10px",
+											color: "var(--text-dim)",
+											fontSize: "0.8rem",
+											letterSpacing: "1.5px",
+										}}>
+										UPLOAD PAYMENT PROOF (IMAGE)
+									</label>
+									<input
+										type="file"
+										name="paymentProof"
+										accept="image/*"
+										onChange={handleFileChange}
+										required
+										style={{
+											width: "100%",
+											borderRadius: "10px",
+											color: "var(--text)",
+											padding: "14px 16px",
+											border: "1px solid var(--border)",
+											background: "var(--input-bg)",
+											fontSize: "0.95rem",
+											fontFamily: "inherit",
+										}}
+									/>
+								</div>
+
+								{submitError && (
+									<p
+										style={{ color: "#ff8f8f", marginBottom: "16px" }}
+										role="alert">
+										{submitError}
+									</p>
+								)}
+
+								<button
+									type="submit"
+									className="btn btn-gold"
+									disabled={submitting || loading || colleges.length === 0}
+									style={{ width: "100%", justifyContent: "center" }}>
+									{submitting ? "Submitting..." : "Register Now"}
+								</button>
+
+								<p
+									style={{
+										marginTop: "24px",
+										maxWidth: "100%",
+										color: "var(--text-dim)",
+										fontSize: "0.82rem",
+										textAlign: "center",
+									}}>
+									By registering, you agree to participate in URJA 2026 events.
+								</p>
+							</form>
+						)}
+					</div>
+				</section>
+			</div>
+
+			<Footer />
+		</>
+	);
 }
