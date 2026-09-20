@@ -1,588 +1,133 @@
 "use client";
 
-import { useRef } from "react";
 import * as THREE from "three";
-import { Canvas, useFrame } from "@react-three/fiber";
-import {
-  Environment,
-  Float,
-  Html,
-  OrbitControls,
-  RoundedBox,
-  Text,
-} from "@react-three/drei";
-
-/* =========================================================
-   Types
-========================================================= */
+import { Canvas } from "@react-three/fiber";
+import { Environment, OrbitControls, RoundedBox, Text } from "@react-three/drei";
 
 interface CircuitBoardHeaderProps {
   displayText?: string;
 }
 
-/* =========================================================
-   PCB BASE - Realistic Circuit Board
-========================================================= */
+type Point = [number, number];
 
-function PCB() {
-  return (
-    <group>
-      {/* Main board base - Dark substrate */}
-      <RoundedBox
-        args={[9, 0.32, 5.2]}
-        radius={0.2}
-        smoothness={4}
-        position={[0, -0.4, 0]}
-      >
-        <meshStandardMaterial
-          color="#0a0e12"
-          roughness={0.78}
-          metalness={0.2}
-        />
-      </RoundedBox>
+const traces: Point[][] = [
+  [[-4.1, 1.7], [-3.2, 1.7], [-2.7, 1.2], [-2.1, 1.2]],
+  [[-4.1, 0.9], [-3.4, 0.9], [-3.0, 0.5], [-2.2, 0.5]],
+  [[-4.1, -1.6], [-3.3, -1.6], [-2.8, -1.15], [-2.3, -1.15]],
+  [[4.1, 1.55], [3.25, 1.55], [2.75, 1.05], [2.25, 1.05]],
+  [[4.1, -0.6], [3.35, -0.6], [2.85, -0.15], [2.25, -0.15]],
+  [[-1.5, -1.85], [-1.5, -1.25], [-1.15, -0.9], [-0.55, -0.9]],
+  [[1.4, -1.85], [1.4, -1.25], [1.05, -0.9], [0.55, -0.9]],
+];
 
-      {/* PCB rim - Light blue accent */}
-      <RoundedBox
-        args={[9.1, 0.12, 5.3]}
-        radius={0.22}
-        smoothness={4}
-        position={[0, -0.08, 0]}
-      >
-        <meshStandardMaterial
-          color="#add8ff"
-          roughness={0.6}
-          metalness={0.4}
-        />
-      </RoundedBox>
-
-      {/* Copper layer - Main surface */}
-      <RoundedBox
-        args={[8.8, 0.06, 5.0]}
-        radius={0.18}
-        smoothness={4}
-        position={[0, 0.02, 0]}
-      >
-        <meshStandardMaterial
-          color="#0f1923"
-          emissive="#0a3d5c"
-          emissiveIntensity={0.4}
-          roughness={0.65}
-          metalness={0.35}
-        />
-      </RoundedBox>
-
-      {/* Mounting holes */}
-      {[
-        [-3.8, -0.2, -2.0],
-        [3.8, -0.2, -2.0],
-        [-3.8, -0.2, 2.0],
-        [3.8, -0.2, 2.0],
-      ].map((pos, i) => (
-        <mesh key={`hole-${i}`} position={pos as [number, number, number]}>
-          <cylinderGeometry args={[0.18, 0.18, 0.35, 12]} />
-          <meshStandardMaterial color="#050a0d" metalness={0.6} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-/* =========================================================
-   CIRCUIT TRACE - Multiple layer traces
-========================================================= */
-
-interface TraceProps {
-  points: [number, number][];
-  width?: number;
-  glowColor?: string;
-}
-
-function Trace({ points, width = 0.022, glowColor = "#147fcc" }: TraceProps) {
+function Trace({ points }: { points: Point[] }) {
   const curve = new THREE.CatmullRomCurve3(
-    points.map(([x, z]) => new THREE.Vector3(x, 0.05, z))
+    points.map(([x, z]) => new THREE.Vector3(x, 0.095, z)),
   );
-
-  const geometry = new THREE.TubeGeometry(
-    curve,
-    Math.max(12, points.length * 6),
-    width,
-    6,
-    false
-  );
-
   return (
     <group>
-      <mesh geometry={geometry}>
-        <meshStandardMaterial
-          color="#1db8ff"
-          emissive={glowColor}
-          emissiveIntensity={2}
-          metalness={0.5}
-          roughness={0.35}
-          toneMapped={false}
-        />
+      <mesh geometry={new THREE.TubeGeometry(curve, 24, 0.026, 6, false)}>
+        <meshStandardMaterial color="#66c7ff" emissive="#1688d4" emissiveIntensity={1.4} metalness={0.8} roughness={0.28} />
       </mesh>
-
-      {/* Via connections at endpoints */}
-      {[points[0], points[points.length - 1]].map((point, idx) => (
-        <mesh key={`via-${idx}`} position={[point[0], 0.07, point[1]]}>
-          <cylinderGeometry args={[0.035, 0.035, 0.04, 8]} />
-          <meshStandardMaterial
-            color="#add8ff"
-            emissive="#87ceeb"
-            emissiveIntensity={2}
-            metalness={0.8}
-          />
+      {points.slice(0, -1).map(([x, z], index) => (
+        <mesh key={index} position={[x, 0.115, z]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.065, 0.065, 0.025, 12]} />
+          <meshStandardMaterial color="#dff5ff" metalness={0.9} roughness={0.2} />
         </mesh>
       ))}
     </group>
   );
 }
 
-/* =========================================================
-   CIRCUIT TRACES - Organized layout
-========================================================= */
-
-function CircuitTraces() {
-  const mainTraces: [number, number][][] = [
-    // Top-left vertical trace
-    [
-      [-4.0, -2.0],
-      [-4.0, -1.0],
-      [-3.5, -0.5],
-      [-2.8, 0.2],
-    ],
-    // Top-right vertical trace
-    [
-      [4.0, -2.0],
-      [4.0, -1.0],
-      [3.5, -0.5],
-      [2.8, 0.2],
-    ],
-    // Bottom left diagonal
-    [
-      [-4.2, 1.8],
-      [-3.2, 1.5],
-      [-2.0, 1.2],
-      [-1.0, 0.5],
-    ],
-    // Bottom right diagonal
-    [
-      [4.2, 1.8],
-      [3.2, 1.5],
-      [2.0, 1.2],
-      [1.0, 0.5],
-    ],
-    // Center cross horizontal
-    [
-      [-2.5, 0.0],
-      [-1.0, 0.1],
-      [1.0, 0.1],
-      [2.5, 0.0],
-    ],
-    // Center vertical connector
-    [
-      [0.0, -1.5],
-      [-0.2, -0.5],
-      [-0.1, 0.5],
-      [0.1, 1.5],
-    ],
-    // Additional complex trace
-    [
-      [-3.0, 1.8],
-      [-2.0, 1.5],
-      [-1.0, 1.0],
-      [0.5, 0.8],
-      [2.0, 0.5],
-    ],
-  ];
-
-  return (
-    <group>
-      {mainTraces.map((points, index) => (
-        <Trace 
-          key={index} 
-          points={points}
-          glowColor={index % 2 === 0 ? "#0878c9" : "#147fcc"}
-        />
-      ))}
-    </group>
-  );
-}
-
-/* =========================================================
-   CHIP
-========================================================= */
-
-interface ChipProps {
-  position: [number, number, number];
-  scale?: number;
-}
-
-function Chip({ position, scale = 1 }: ChipProps) {
+function Chip({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
   return (
     <group position={position} scale={scale}>
-      {/* Chip body */}
-      <RoundedBox
-        args={[0.8, 0.15, 0.7]}
-        radius={0.06}
-        smoothness={3}
-      >
-        <meshStandardMaterial
-          color="#111b20"
-          roughness={0.55}
-          metalness={0.65}
-        />
+      <RoundedBox args={[0.78, 0.12, 0.62]} radius={0.05} smoothness={3}>
+        <meshStandardMaterial color="#05080b" metalness={0.75} roughness={0.32} />
       </RoundedBox>
-
-      {/* Chip center */}
-      <mesh position={[0, 0.09, 0]}>
-        <boxGeometry args={[0.42, 0.035, 0.32]} />
-        <meshStandardMaterial
-          color="#061015"
-          emissive="#064d78"
-          emissiveIntensity={1}
-        />
+      <mesh position={[0, 0.072, 0]}>
+        <boxGeometry args={[0.4, 0.018, 0.3]} />
+        <meshStandardMaterial color="#121d25" emissive="#07538a" emissiveIntensity={0.7} />
       </mesh>
-
-      {/* Pins */}
-      {[-0.24, -0.08, 0.08, 0.24].map((x) => (
-        <group key={`x-${x}`}>
-          <mesh position={[x, 0.02, 0.42]}>
-            <boxGeometry args={[0.06, 0.07, 0.28]} />
-            <meshStandardMaterial
-              color="#ffffff"
-              metalness={0.9}
-              roughness={0.25}
-            />
-          </mesh>
-
-          <mesh position={[x, 0.02, -0.42]}>
-            <boxGeometry args={[0.06, 0.07, 0.28]} />
-            <meshStandardMaterial
-              color="#ffffff"
-              metalness={0.9}
-              roughness={0.25}
-            />
-          </mesh>
-        </group>
-      ))}
-
-      {[-0.22, -0.07, 0.08, 0.23].map((z) => (
-        <group key={`z-${z}`}>
-          <mesh position={[0.47, 0.02, z]}>
-            <boxGeometry args={[0.28, 0.07, 0.06]} />
-            <meshStandardMaterial
-              color="#ffffff"
-              metalness={0.9}
-              roughness={0.25}
-            />
-          </mesh>
-
-          <mesh position={[-0.47, 0.02, z]}>
-            <boxGeometry args={[0.28, 0.07, 0.06]} />
-            <meshStandardMaterial
-              color="#ffffff"
-              metalness={0.9}
-              roughness={0.25}
-            />
-          </mesh>
-        </group>
-      ))}
+      {[-0.24, -0.08, 0.08, 0.24].flatMap((x) => [
+        <mesh key={`${x}-a`} position={[x, 0.015, 0.39]}><boxGeometry args={[0.055, 0.05, 0.24]} /><meshStandardMaterial color="#f7fbff" metalness={0.95} roughness={0.18} /></mesh>,
+        <mesh key={`${x}-b`} position={[x, 0.015, -0.39]}><boxGeometry args={[0.055, 0.05, 0.24]} /><meshStandardMaterial color="#f7fbff" metalness={0.95} roughness={0.18} /></mesh>,
+      ])}
     </group>
   );
 }
 
-/* =========================================================
-   LED
-========================================================= */
-
-function LED({
-  position,
-  color = "#29bfff",
-}: {
-  position: [number, number, number];
-  color?: string;
-}) {
-  const ref = useRef<THREE.Mesh>(null);
-
-  useFrame(({ clock }) => {
-    if (!ref.current) return;
-
-    const pulse =
-      1.5 + Math.sin(clock.getElapsedTime() * 4.5) * 0.7;
-
-    const material = ref.current.material as THREE.MeshStandardMaterial;
-
-    material.emissiveIntensity = pulse;
-  });
-
+function Resistor({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
   return (
-    <mesh ref={ref} position={position}>
-      <sphereGeometry args={[0.075, 12, 12]} />
-
-      <meshStandardMaterial
-        color={color}
-        emissive={color}
-        emissiveIntensity={2}
-        toneMapped={false}
-      />
-    </mesh>
-  );
-}
-
-/* =========================================================
-   DISPLAY
-========================================================= */
-
-function Display({ text }: { text: string }) {
-  return (
-    <group position={[0, 0.12, 0]}>
-      {/* Display housing */}
-      <RoundedBox
-        args={[3.9, 0.22, 1.55]}
-        radius={0.12}
-        smoothness={5}
-      >
-        <meshStandardMaterial
-          color="#10191e"
-          roughness={0.35}
-          metalness={0.75}
-        />
-      </RoundedBox>
-
-      {/* Blue outer frame */}
-      <RoundedBox
-        args={[3.55, 0.08, 1.2]}
-        radius={0.08}
-        smoothness={4}
-        position={[0, 0.13, 0]}
-      >
-        <meshStandardMaterial
-          color="#06344e"
-          emissive="#0879b8"
-          emissiveIntensity={1.3}
-          roughness={0.35}
-          metalness={0.5}
-        />
-      </RoundedBox>
-
-      {/* Screen */}
-      <RoundedBox
-        args={[3.35, 0.045, 1.02]}
-        radius={0.06}
-        smoothness={4}
-        position={[0, 0.18, 0]}
-      >
-        <meshStandardMaterial
-          color="#02090d"
-          emissive="#062d45"
-          emissiveIntensity={1.2}
-          roughness={0.35}
-        />
-      </RoundedBox>
-
-      {/* Display text */}
-      <Html
-        center
-        position={[0, 0.3, 0]}
-        distanceFactor={5}
-        zIndexRange={[10, 0]}
-      >
-        <div className="whitespace-nowrap font-mono text-[26px] font-bold tracking-[0.18em] text-[#b9efff] drop-shadow-[0_0_8px_#087fc4]">
-          {text.toUpperCase()}
-        </div>
-      </Html>
-
-      {/* Tiny display LEDs */}
-      <LED position={[-1.55, 0.25, -0.55]} />
-      <LED position={[1.55, 0.25, -0.55]} color="#167fff" />
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh><boxGeometry args={[0.58, 0.08, 0.2]} /><meshStandardMaterial color="#f4f7f8" roughness={0.4} /></mesh>
+      <mesh position={[-0.13, 0.045, 0]}><boxGeometry args={[0.055, 0.018, 0.21]} /><meshStandardMaterial color="#1689d4" /></mesh>
+      <mesh position={[0.08, 0.045, 0]}><boxGeometry args={[0.055, 0.018, 0.21]} /><meshStandardMaterial color="#0b1a27" /></mesh>
+      <mesh position={[0.28, 0, 0]}><boxGeometry args={[0.18, 0.035, 0.08]} /><meshStandardMaterial color="#dceeff" metalness={0.85} /></mesh>
+      <mesh position={[-0.28, 0, 0]}><boxGeometry args={[0.18, 0.035, 0.08]} /><meshStandardMaterial color="#dceeff" metalness={0.85} /></mesh>
     </group>
   );
 }
 
-/* =========================================================
-   RESISTOR
-========================================================= */
-
-function Resistor({
-  position,
-  rotation = [0, 0, 0],
-}: {
-  position: [number, number, number];
-  rotation?: [number, number, number];
-}) {
+function Display({ displayText }: { displayText: string }) {
   return (
-    <group position={position} rotation={rotation}>
-      {/* Body */}
-      <mesh>
-        <cylinderGeometry args={[0.12, 0.12, 0.55, 10]} />
-        <meshStandardMaterial
-          color="#f5fbff"
-          metalness={0.7}
-          roughness={0.3}
-        />
+    <group position={[0, 0.18, 0.15]}>
+      <RoundedBox args={[4.8, 0.14, 1.65]} radius={0.08} smoothness={3}>
+        <meshStandardMaterial color="#06090c" metalness={0.7} roughness={0.25} />
+      </RoundedBox>
+      <mesh position={[0, 0.085, 0]}>
+        <boxGeometry args={[4.35, 0.025, 1.22]} />
+        <meshStandardMaterial color="#071724" emissive="#063d68" emissiveIntensity={0.8} roughness={0.22} />
       </mesh>
+      <Text position={[0, 0.12, 0.02]} rotation={[-Math.PI / 2, 0, 0]} font="/fonts/Geist_Bold.json" fontSize={0.65} maxWidth={4} color="#eaf8ff" anchorX="center" anchorY="middle" outlineWidth={0.012} outlineColor="#168bd2">
+        {displayText.toUpperCase()}
+      </Text>
+      <mesh position={[-2.12, 0.12, -0.48]} rotation={[Math.PI / 2, 0, 0]}><circleGeometry args={[0.055, 12]} /><meshStandardMaterial color="#66c7ff" emissive="#168bd4" emissiveIntensity={2} /></mesh>
+      <mesh position={[2.12, 0.12, -0.48]} rotation={[Math.PI / 2, 0, 0]}><circleGeometry args={[0.055, 12]} /><meshStandardMaterial color="#66c7ff" emissive="#168bd4" emissiveIntensity={2} /></mesh>
+    </group>
+  );
+}
 
-      {/* Leads */}
-      <mesh position={[0, 0.4, 0]}>
-        <cylinderGeometry args={[0.025, 0.025, 0.3, 6]} />
-        <meshStandardMaterial
-          color="#add8ff"
-          metalness={0.8}
-        />
+function PCBScene({ displayText }: { displayText: string }) {
+  return (
+    <group>
+      <RoundedBox args={[9.2, 0.08, 4.4]} radius={0.12} smoothness={4}>
+        <meshStandardMaterial color="#0a1016" roughness={0.64} metalness={0.32} />
+      </RoundedBox>
+      <mesh position={[0, 0.047, 0]}>
+        <boxGeometry args={[8.95, 0.018, 4.15]} />
+        <meshStandardMaterial color="#101b24" roughness={0.7} metalness={0.18} />
       </mesh>
-
-      <mesh position={[0, -0.4, 0]}>
-        <cylinderGeometry args={[0.025, 0.025, 0.3, 6]} />
-        <meshStandardMaterial
-          color="#add8ff"
-          metalness={0.8}
-        />
-      </mesh>
-
-      {/* Bands */}
-      {[-0.13, 0, 0.13].map((y, index) => (
-        <mesh key={index} position={[0, y, 0]}>
-          <torusGeometry args={[0.122, 0.018, 6, 12]} />
-          <meshStandardMaterial
-            color="#168bd0"
-            emissive="#0872ae"
-            emissiveIntensity={0.7}
-          />
-        </mesh>
+      {traces.map((points, index) => <Trace key={index} points={points} />)}
+      <Display displayText={displayText} />
+      <Chip position={[-3.25, 0.14, 1.35]} scale={0.85} />
+      <Chip position={[3.25, 0.14, 0.95]} scale={0.78} />
+      <Chip position={[-2.95, 0.14, -1.45]} scale={0.72} />
+      <Chip position={[2.95, 0.14, -1.15]} scale={0.68} />
+      <Resistor position={[-1.85, 0.14, 1.82]} rotation={0.12} />
+      <Resistor position={[1.85, 0.14, 1.72]} rotation={-0.12} />
+      <Resistor position={[-0.95, 0.14, -1.55]} rotation={0.08} />
+      <Resistor position={[0.95, 0.14, -1.55]} rotation={-0.08} />
+      {[[ -4.25, 1.85], [4.25, 1.85], [-4.25, -1.85], [4.25, -1.85]].map(([x, z], index) => (
+        <mesh key={index} position={[x, 0.1, z]} rotation={[Math.PI / 2, 0, 0]}><ringGeometry args={[0.12, 0.17, 16]} /><meshStandardMaterial color="#dff5ff" metalness={0.95} roughness={0.18} /></mesh>
       ))}
     </group>
   );
 }
 
-/* =========================================================
-   BOARD CONTENT
-========================================================= */
-
-function BoardContents({ displayText }: { displayText: string }) {
+export default function CircuitBoardHeader({ displayText = "REGISTER" }: CircuitBoardHeaderProps) {
   return (
-    <group position={[0, 0.14, 0]}>
-      <CircuitTraces />
-
-      {/* Chips */}
-      <Chip position={[-2.9, 0, 1.35]} scale={0.8} />
-      <Chip position={[2.9, 0, 1.35]} scale={0.8} />
-      <Chip position={[-2.9, 0, -1.25]} scale={0.72} />
-      <Chip position={[2.9, 0, -1.25]} scale={0.72} />
-
-      {/* Resistors */}
-      <Resistor
-        position={[-1.8, 0.02, 1.8]}
-        rotation={[Math.PI / 2, 0, 0]}
-      />
-
-      <Resistor
-        position={[1.75, 0.02, 1.75]}
-        rotation={[Math.PI / 2, 0, 0]}
-      />
-
-      {/* LEDs */}
-      <LED position={[-3.65, 0.08, -0.4]} />
-      <LED position={[3.65, 0.08, -0.35]} color="#218cff" />
-
-      {/* Main display */}
-      <Display text={displayText} />
-    </group>
-  );
-}
-
-/* =========================================================
-   WHOLE BOARD
-========================================================= */
-
-function CircuitBoard({ displayText }: { displayText: string }) {
-  const groupRef = useRef<THREE.Group>(null);
-
-  useFrame(({ pointer }) => {
-    if (!groupRef.current) return;
-
-    const targetRotationY = pointer.x * 0.08;
-    const targetRotationX = -pointer.y * 0.05;
-
-    groupRef.current.rotation.y = THREE.MathUtils.lerp(
-      groupRef.current.rotation.y,
-      targetRotationY,
-      0.05
-    );
-
-    groupRef.current.rotation.x = THREE.MathUtils.lerp(
-      groupRef.current.rotation.x,
-      targetRotationX,
-      0.05
-    );
-  });
-
-  return (
-    <group ref={groupRef} rotation={[-0.08, 0, 0]}>
-      <PCB />
-
-      <Float
-        speed={1.2}
-        rotationIntensity={0.05}
-        floatIntensity={0.12}
-      >
-        <BoardContents displayText={displayText} />
-      </Float>
-    </group>
-  );
-}
-
-/* =========================================================
-   MAIN COMPONENT
-========================================================= */
-
-export default function CircuitBoardHeader({
-  displayText = "REGISTER",
-}: CircuitBoardHeaderProps) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "430px",
-        position: "relative",
-      }}
-    >
-      <Canvas
-        camera={{
-          position: [0, 5.7, 7.5],
-          fov: 42,
-        }}
-        dpr={[1, 1.75]}
-        gl={{
-          antialias: true,
-          alpha: true,
-        }}
-      >
-        <ambientLight intensity={0.35} />
-
-        <directionalLight
-          position={[3, 6, 4]}
-          intensity={2}
-        />
-
-        <pointLight
-          position={[0, 2, 1]}
-          color="#149ee8"
-          intensity={25}
-          distance={8}
-        />
-
-        <CircuitBoard displayText={displayText} />
-
-        <Environment preset="night" />
-
-        <OrbitControls
-          enableZoom={false}
-          enablePan={false}
-          enableRotate={false}
-        />
-      </Canvas>
+    <div style={{ width: "100%", height: "250px", position: "relative" }}>
+      <Canvas orthographic camera={{ position: [0, 0, 10], zoom: 74 }} dpr={[1, 1.75]} gl={{ antialias: true, alpha: true }}>
+        <ambientLight intensity={1.25} />
+        <directionalLight position={[-3, 5, 6]} intensity={2.2} color="#ffffff" />
+        <pointLight position={[0, 1, 4]} intensity={4} distance={10} color="#2b9fe8" />
+        <PCBScene displayText={displayText} />
+        <Environment preset="studio" />
+        <OrbitControls enableZoom={false} enablePan={false} enableRotate={false} />
+            </Canvas>
     </div>
   );
 }
+
+export { CircuitBoardHeader };
