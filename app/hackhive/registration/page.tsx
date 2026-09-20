@@ -22,6 +22,14 @@ import {
 } from "firebase/storage";
 import LcdBoard from "@/app/components/CircuitBoard";
 
+type RegistrationEvent = {
+	Id: number | string;
+	Name: string;
+	Description?: string;
+	Venue: string;
+	Date_and_Time: string;
+	Fee?: string;
+};
 type College = {
 	id: string;
 	ClCode: string;
@@ -35,7 +43,7 @@ type College = {
 
 export default function Register() {
 	const [colleges, setColleges] = useState<College[]>([]);
-	const [day2Events, setDay2Events] = useState<Event[]>([]);
+	const [day2Events, setDay2Events] = useState<RegistrationEvent[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [submitError, setSubmitError] = useState<string | null>(null);
@@ -72,8 +80,8 @@ export default function Register() {
 						getDocs(collection(db, "Day2")),
 					]);
 
-				const mapEvent = (eventData: unknown, fallbackId: string): Event => {
-					const data = (eventData ?? {}) as Partial<Event> & {
+				const mapEvent = (eventData: unknown, fallbackId: string): RegistrationEvent => {
+					const data = (eventData ?? {}) as Partial<RegistrationEvent> & {
 						Date?: unknown;
 						Date_and_Time?: unknown;
 					};
@@ -88,7 +96,7 @@ export default function Register() {
 					};
 				};
 
-				const mapEvents = (snapshot: typeof day2Snapshot): Event[] =>
+				const mapEvents = (snapshot: typeof day2Snapshot): RegistrationEvent[] =>
 					snapshot.docs.map((eventDoc) => {
 						return mapEvent(eventDoc.data(), eventDoc.id);
 					});
@@ -137,7 +145,7 @@ export default function Register() {
 		};
 	}, []);
 
-	const getEventsForDay = (day: string): Event[] => {
+	const getEventsForDay = (day: string): RegistrationEvent[] => {
 		return day === "Day 2" ? day2Events : [];
 	};
 
