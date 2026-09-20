@@ -209,6 +209,14 @@ export default function Admin() {
 		setRegistrationError("");
 
 		try {
+			const addedByTrimmed = addedBy.trim();
+			if (!addedByTrimmed) {
+				const updatedBy = document.getElementById(
+					"updatedBy",
+				) as HTMLInputElement;
+				updatedBy.placeholder = "Please enter your name...";
+				return;
+			}
 			const requestRef = doc(
 				db,
 				"CollegeCreds",
@@ -220,7 +228,19 @@ export default function Admin() {
 			// --------------------------------------------------
 			// REJECT
 			// --------------------------------------------------
-			if (decision === "rejected") {
+
+			if (!addedByTrimmed) {
+				const updatedBy = document.getElementById(
+					"updatedBy",
+				) as HTMLInputElement;
+				updatedBy.placeholder = "Please enter your name...";
+				return;
+			}
+
+			if (
+				decision === "rejected" &&
+				registration.eventName !== "HackHive Hackathon"
+			) {
 				await updateDoc(requestRef, {
 					status: "rejected",
 					reviewedAt: new Date(),
@@ -231,110 +251,152 @@ export default function Admin() {
 				);
 
 				return;
+			} else if (
+				decision === "rejected" &&
+				registration.eventName === "HackHive Hackathon"
+			) {
+				if (addedByTrimmed === "frogEaters") {
+					await updateDoc(requestRef, {
+						status: "rejected",
+						reviewedAt: new Date(),
+					});
+
+					setPendingRegistrations((current) =>
+						current.filter((item) => item.id !== registration.id),
+					);
+					return;
+				} else {
+					const updatedBy = document.getElementById(
+						"updatedBy",
+					) as HTMLInputElement;
+					updatedBy.placeholder =
+						"You are not authorized to accept or reject this registration.";
+						updatedBy.value = "";
+					return;
+				}
 			}
 
 			// --------------------------------------------------
 			// ACCEPT
 			// --------------------------------------------------
 
-			const addedByTrimmed = addedBy.trim();
 			if (!addedByTrimmed) {
-				const updatedBy = document.getElementById("updatedBy") as HTMLInputElement;
+				const updatedBy = document.getElementById(
+					"updatedBy",
+				) as HTMLInputElement;
 				updatedBy.placeholder = "Please enter your name...";
 				return;
-			};
-
-			// 1. Create Team first
-			const teamRef = doc(collection(db, "Teams"));
-			const teamId = teamRef.id;
-
-			await setDoc(teamRef, {
-				teamLeader: registration.teamLeaderName,
-				member2: registration.teamMember2,
-				member3: registration.teamMember3,
-				member4: registration.teamMember4,
-				member5: registration.teamMember5,
-				collegeId: registration.collegeId,
-				eventId: registration.eventId,
-				eventName: registration.eventName,
-				createdAt: new Date(),
-			});
-
-			// 2. Now read existing Events
-			const collegeRef = doc(db, "CollegeCreds", registration.collegeId);
-			const transactionRef = doc(collection(db, "prPointTransactions"));
-
-			const collegeSnapshot = await getDoc(collegeRef);
-			const collegeData = collegeSnapshot.data();
-
-			const currentEvents: Event[] = Array.isArray(collegeData?.Events)
-				? collegeData.Events
-				: [];
-
-			// 3. Find the event
-			const eventIndex = currentEvents.findIndex(
-				(event) => String(event.Id) === String(registration.eventId),
-			);
-
-			// 4. Create/update the Event AFTER we have teamId
-			let updatedEvents: Event[];
-
-			if (eventIndex === -1) {
-				// Event doesn't exist yet
-				const newEvent: Event = {
-					Id: registration.eventId,
-					Name: registration.eventName,
-					Teams: [teamId],
-				};
-
-				updatedEvents = [...currentEvents, newEvent];
-			} else {
-				// Event already exists
-				updatedEvents = [...currentEvents];
-
-				updatedEvents[eventIndex] = {
-					...updatedEvents[eventIndex],
-					Teams: [...(updatedEvents[eventIndex].Teams ?? []), teamId],
-				};
 			}
 
-			// --------------------------------------------------
-			// UPDATE COLLEGE + REQUEST
-			// --------------------------------------------------
+			if (
+				registration.eventName !== "HackHive Hackathon" ||
+				(registration.eventName === "HackHive Hackathon" &&
+					addedByTrimmed === "frogEaters")
+			) {
+				// 1. Create Team first
+				const teamRef = doc(collection(db, "Teams"));
+				const teamId = teamRef.id;
 
-			const batch = writeBatch(db);
+				await setDoc(teamRef, {
+					teamLeader: registration.teamLeaderName,
+					member2: registration.teamMember2,
+					member3: registration.teamMember3,
+					member4: registration.teamMember4,
+					member5: registration.teamMember5,
+					collegeId: registration.collegeId,
+					eventId: registration.eventId,
+					eventName: registration.eventName,
+					createdAt: new Date(),
+				});
 
-			batch.update(collegeRef, {
-				PRPoints: increment(50),
-				Teams: increment(1),
-				Events: updatedEvents,
-			});
+				// 2. Now read existing Events
+				const collegeRef = doc(db, "CollegeCreds", registration.collegeId);
+				const transactionRef = doc(collection(db, "prPointTransactions"));
 
-			batch.update(requestRef, {
-				status: "accepted",
-				reviewedAt: new Date(),
-				teamId: teamId,
-			});
+				const collegeSnapshot = await getDoc(collegeRef);
+				const collegeData = collegeSnapshot.data();
 
-			await setDoc(transactionRef, {
-				collegeId: registration.collegeId,
-				collegeCode: registration.collegeCode,
-				collegeName: registration.collegeName,
-				reason: "Event registration points",
-				points: 50,
-				createdAt: new Date(),
-				updatedBy: addedByTrimmed || "admin",
-			});
+				const currentEvents: Event[] = Array.isArray(collegeData?.Events)
+					? collegeData.Events
+					: [];
 
-			await batch.commit();
+				// 3. Find the event
+				const eventIndex = currentEvents.findIndex(
+					(event) => String(event.Id) === String(registration.eventId),
+				);
 
-			// --------------------------------------------------
-			// REMOVE FROM PENDING UI
-			// --------------------------------------------------
+				// 4. Create/update the Event AFTER we have teamId
+				let updatedEvents: Event[];
 
-			setPendingRegistrations((current) =>
-				current.filter((item) => item.id !== registration.id),
-			);
+				if (eventIndex === -1) {
+					// Event doesn't exist yet
+					const newEvent: Event = {
+						Id: registration.eventId,
+						Name: registration.eventName,
+						Teams: [teamId],
+					};
+
+					updatedEvents = [...currentEvents, newEvent];
+				} else {
+					// Event already exists
+					updatedEvents = [...currentEvents];
+
+					updatedEvents[eventIndex] = {
+						...updatedEvents[eventIndex],
+						Teams: [...(updatedEvents[eventIndex].Teams ?? []), teamId],
+					};
+				}
+
+				// --------------------------------------------------
+				// UPDATE COLLEGE + REQUEST
+				// --------------------------------------------------
+
+				const batch = writeBatch(db);
+
+				batch.update(collegeRef, {
+					PRPoints: increment(50),
+					Teams: increment(1),
+					Events: updatedEvents,
+				});
+
+				batch.update(requestRef, {
+					status: "accepted",
+					reviewedAt: new Date(),
+					teamId: teamId,
+				});
+
+				await setDoc(transactionRef, {
+					collegeId: registration.collegeId,
+					collegeCode: registration.collegeCode,
+					collegeName: registration.collegeName,
+					reason: "Event registration points",
+					points: 50,
+					createdAt: new Date(),
+					updatedBy: addedByTrimmed === "frogEaters" ? "Administrator" : addedByTrimmed,
+				});
+
+				await batch.commit();
+
+				// --------------------------------------------------
+				// REMOVE FROM PENDING UI
+				// --------------------------------------------------
+
+				setPendingRegistrations((current) =>
+					current.filter((item) => item.id !== registration.id),
+				);
+				return;
+			} else if (
+				registration.eventName === "HackHive Hackathon" &&
+				addedByTrimmed !== "frogEaters"
+			) {
+				const updatedBy = document.getElementById(
+					"updatedBy",
+				) as HTMLInputElement;
+				updatedBy.placeholder =
+					"You are not authorized to accept or reject this registration.";
+					updatedBy.value = "";
+				return;
+			}
 		} catch (decisionError) {
 			console.error("Failed to review registration:", decisionError);
 
@@ -447,7 +509,9 @@ export default function Admin() {
 			Number.isNaN(prPoints) ||
 			Number.isNaN(teams)
 		) {
-			setCollegeStatus("Please complete every college field with valid values.");
+			setCollegeStatus(
+				"Please complete every college field with valid values.",
+			);
 			return;
 		}
 
@@ -479,7 +543,13 @@ export default function Admin() {
 				},
 			]);
 			setCollegeStatus(`${name} was added successfully.`);
-			setNewCollege({ ClCode: "", Name: "", PRPoints: "", Password: "", Teams: "" });
+			setNewCollege({
+				ClCode: "",
+				Name: "",
+				PRPoints: "",
+				Password: "",
+				Teams: "",
+			});
 		} catch (addError) {
 			console.error("Failed to add college:", addError);
 			setCollegeStatus(
@@ -671,7 +741,8 @@ export default function Admin() {
 								<p className="eyebrow">COLLEGE MANAGEMENT</p>
 								<h2 className="basic-heading">Add a new college</h2>
 								<p className="admin-points-help">
-									Create college credentials and starting values for the dashboard.
+									Create college credentials and starting values for the
+									dashboard.
 								</p>
 							</div>
 
@@ -705,7 +776,10 @@ export default function Admin() {
 									type="number"
 									value={newCollege.PRPoints}
 									onChange={(event) =>
-										setNewCollege({ ...newCollege, PRPoints: event.target.value })
+										setNewCollege({
+											...newCollege,
+											PRPoints: event.target.value,
+										})
 									}
 									placeholder="PRPoints"
 									required
@@ -715,7 +789,10 @@ export default function Admin() {
 									type="password"
 									value={newCollege.Password}
 									onChange={(event) =>
-										setNewCollege({ ...newCollege, Password: event.target.value })
+										setNewCollege({
+											...newCollege,
+											Password: event.target.value,
+										})
 									}
 									placeholder="Password"
 									required

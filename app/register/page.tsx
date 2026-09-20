@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { formatEventDateTime } from "../events/page";
@@ -48,6 +49,8 @@ const eventDays = [
 	{ label: "Day 2", collectionName: "Day2" },
 	{ label: "Day 4", collectionName: "Day4" },
 ] as const;
+
+const separateDay2Events = new Set(["HackHive Hackathon", "The Pitch Room"]);
 
 export default function Register() {
 	const [colleges, setColleges] = useState<College[]>([]);
@@ -169,7 +172,7 @@ export default function Register() {
 					)?.Events ?? []
 				);
 			case "Day 2":
-				return day2Events;
+				return day2Events.filter((event) => !separateDay2Events.has(event.Name));
 			case "Day 4":
 				return day4Events;
 			default:
@@ -597,6 +600,20 @@ export default function Register() {
 										))}
 									</select>
 								</div>
+
+								{formData.selectedDay === "Day 2" && (
+									<div className="separate-registration-notice">
+										<p>Some Day 2 events have dedicated registration pages:</p>
+										<div className="separate-registration-links">
+											<Link href="/hackhive" className="separate-registration-link">
+												Register for HackHive Hackathon
+											</Link>
+											<Link href="/pitchroom" className="separate-registration-link">
+												Register for The Pitch Room
+											</Link>
+										</div>
+									</div>
+								)}
 
 								{formData.selectedDay === "Day 1" && (
 									<div style={{ marginBottom: "24px" }}>
