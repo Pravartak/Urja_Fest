@@ -117,12 +117,19 @@ function PCBScene({ displayText }: { displayText: string }) {
 
 export default function CircuitBoardHeader({ displayText = "REGISTER" }: CircuitBoardHeaderProps) {
   return (
-    <div style={{ width: "100%", height: "250px", position: "relative" }}>
-      <Canvas orthographic camera={{ position: [0, 0, 10], zoom: 74 }} dpr={[1, 1.75]} gl={{ antialias: true, alpha: true }}>
+    <div style={{ width: "100%", height: "250px", position: "relative", overflow: "hidden" }}>
+      <div aria-hidden="true" style={{ position: "absolute", inset: "20px auto auto 50%", transform: "translateX(-50%)", width: "min(88vw, 680px)", height: "210px", border: "2px solid #168bd2", borderRadius: "10px", background: "#0a1016", boxShadow: "0 0 28px rgba(22,139,210,.35), inset 0 0 0 8px #101b24", zIndex: 0 }}>
+        <div style={{ position: "absolute", inset: "22px 120px", display: "grid", placeItems: "center", border: "1px solid #168bd2", background: "#071724", color: "#eaf8ff", fontFamily: "monospace", fontWeight: 800, fontSize: "clamp(20px, 4vw, 38px)", letterSpacing: "0.12em", textShadow: "0 0 12px #168bd2" }}>{displayText.toUpperCase()}</div>
+        {["10%", "28%", "72%", "90%"].map((left) => <span key={left} style={{ position: "absolute", left, top: "10px", width: "8px", height: "8px", borderRadius: "50%", background: "#66c7ff", boxShadow: "0 0 10px #66c7ff" }} />)}
+        <div style={{ position: "absolute", left: "12px", right: "12px", top: "50%", height: "2px", background: "#168bd2", opacity: 0.8 }} />
+      </div>
+      <Canvas camera={{ position: [0, 0, 10], fov: 32, near: 0.1, far: 100 }} dpr={[1, 1.75]} gl={{ antialias: true, alpha: true }} onCreated={({ camera }) => camera.lookAt(0, 0, 0)}>
         <ambientLight intensity={1.25} />
         <directionalLight position={[-3, 5, 6]} intensity={2.2} color="#ffffff" />
         <pointLight position={[0, 1, 4]} intensity={4} distance={10} color="#2b9fe8" />
-        <PCBScene displayText={displayText} />
+        <group rotation={[-Math.PI / 2, 0, 0]}>
+          <PCBScene displayText={displayText} />
+        </group>
         <Environment preset="studio" />
         <OrbitControls enableZoom={false} enablePan={false} enableRotate={false} />
             </Canvas>
