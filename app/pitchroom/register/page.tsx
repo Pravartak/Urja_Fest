@@ -17,7 +17,7 @@ import {
 	ref as storageRef,
 	uploadBytes,
 } from "firebase/storage";
-import LcdBoard from "@/app/components/CircuitBoard";
+// import LcdBoard from "@/app/components/CircuitBoard";
 
 type Event = {
 	Id: number | string;
@@ -352,11 +352,11 @@ export default function Register() {
 			<div className="cosmic-vignette" />
 			<div className="page-wrap">
 				<section className="register-hero hackhive-registration-hero">
-					<LcdBoard
-						text="Register"
-						align="center"
-						className="hackhive-registration-board"
-					/>
+					{/* <LcdBoard
+					text="Register"
+					align="center"
+					className="hackhive-registration-board"
+					/> */}
 				</section>
 
 				<section className="section">
