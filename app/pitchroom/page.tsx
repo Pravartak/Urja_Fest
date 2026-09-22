@@ -5,29 +5,37 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
 const cardStyle: React.CSSProperties = {
-	background: "var(--card)",
-	border: "1px solid var(--border)",
+	background: "rgba(10, 20, 45, 0.55)",
+	border: "1px solid rgba(94, 234, 212, 0.25)",
 	borderRadius: "18px",
 	padding: "32px",
 	marginBottom: "28px",
+	backdropFilter: "blur(6px)",
+	boxShadow: "0 0 30px rgba(56, 189, 248, 0.08)",
 };
 
 const sectionTitleStyle: React.CSSProperties = {
-	fontSize: "1.6rem",
+	fontSize: "2.1rem",
+	fontWeight: 800,
 	marginBottom: "18px",
-	color: "var(--gold)",
 	letterSpacing: "1px",
+	textTransform: "uppercase",
+	backgroundImage: "linear-gradient(90deg, #5eead4 0%, #38bdf8 100%)",
+	WebkitBackgroundClip: "text",
+	backgroundClip: "text",
+	color: "transparent",
+	WebkitTextFillColor: "transparent",
 };
 
 const bodyTextStyle: React.CSSProperties = {
-	color: "var(--text-dim)",
+	color: "#a7f3e0",
 	fontSize: "0.98rem",
 	lineHeight: 1.7,
 	marginBottom: "14px",
 };
 
 const listStyle: React.CSSProperties = {
-	color: "var(--text-dim)",
+	color: "#a7f3e0",
 	fontSize: "0.98rem",
 	lineHeight: 1.8,
 	paddingLeft: "20px",
@@ -43,13 +51,34 @@ export default function PitchRoomLanding() {
 
 			<div className="page-wrap">
 				<section className="register-hero">
-					<h1 className="hero-title" data-text="The Pitch Room">
+					<h1
+						className="hero-title"
+						data-text="The Pitch Room"
+						style={{
+							backgroundImage:
+								"linear-gradient(90deg, #5eead4 0%, #38bdf8 100%)",
+							WebkitBackgroundClip: "text",
+							backgroundClip: "text",
+							color: "transparent",
+							WebkitTextFillColor: "transparent",
+						}}>
 						The Pitch Room
 					</h1>
-					<p className="hero-tagline">Pitch Beyond Possibilities</p>
+					<p
+						className="hero-tagline"
+						style={{
+							background: "rgba(10, 20, 45, 0.6)",
+							border: "1px solid rgba(94, 234, 212, 0.3)",
+							color: "#e6fff9",
+							display: "inline-block",
+							padding: "10px 24px",
+							borderRadius: "999px",
+						}}>
+						Pitch Beyond Possibilities
+					</p>
 					<p
 						style={{
-							color: "var(--text-dim)",
+							color: "#7ec9c2",
 							marginTop: "8px",
 							fontSize: "0.95rem",
 							letterSpacing: "1px",
@@ -104,42 +133,42 @@ export default function PitchRoomLanding() {
 								<div>
 									<p
 										style={{
-											color: "var(--text-dim)",
+											color: "#7ec9c2",
 											fontSize: "0.75rem",
 											letterSpacing: "1.5px",
 											marginBottom: "6px",
 										}}>
 										DATE
 									</p>
-									<p style={{ color: "var(--text)", fontSize: "1.05rem" }}>
+									<p style={{ color: "#e6fff9", fontSize: "1.05rem" }}>
 										27 October 2026
 									</p>
 								</div>
 								<div>
 									<p
 										style={{
-											color: "var(--text-dim)",
+											color: "#7ec9c2",
 											fontSize: "0.75rem",
 											letterSpacing: "1.5px",
 											marginBottom: "6px",
 										}}>
 										TEAM SIZE
 									</p>
-									<p style={{ color: "var(--text)", fontSize: "1.05rem" }}>
+									<p style={{ color: "#e6fff9", fontSize: "1.05rem" }}>
 										3 – 5 members
 									</p>
 								</div>
 								<div>
 									<p
 										style={{
-											color: "var(--text-dim)",
+											color: "#7ec9c2",
 											fontSize: "0.75rem",
 											letterSpacing: "1.5px",
 											marginBottom: "6px",
 										}}>
 										ELIGIBILITY
 									</p>
-									<p style={{ color: "var(--text)", fontSize: "1.05rem" }}>
+									<p style={{ color: "#e6fff9", fontSize: "1.05rem" }}>
 										UG &amp; PG students, any college
 									</p>
 								</div>
@@ -150,20 +179,20 @@ export default function PitchRoomLanding() {
 						<div style={cardStyle}>
 							<h2 style={sectionTitleStyle}>General Guidelines</h2>
 							<p style={bodyTextStyle}>
-								<strong style={{ color: "var(--text)" }}>Eligibility:</strong>{" "}
+								<strong style={{ color: "#e6fff9" }}>Eligibility:</strong>{" "}
 								Open to all undergraduate and postgraduate students from any
 								recognized college interested in entrepreneurship, innovation,
 								and presenting business ideas.
 							</p>
 							<p style={bodyTextStyle}>
-								<strong style={{ color: "var(--text)" }}>
+								<strong style={{ color: "#e6fff9" }}>
 									Team Composition:
 								</strong>{" "}
 								Teams of minimum 3 and maximum 5 members, working together to
 								develop, plan, and present their business concept.
 							</p>
 							<p style={bodyTextStyle}>
-								<strong style={{ color: "var(--text)" }}>
+								<strong style={{ color: "#e6fff9" }}>
 									Business Idea:
 								</strong>{" "}
 								An original, innovative idea from any sector (technology,
@@ -171,7 +200,7 @@ export default function PitchRoomLanding() {
 								solving a real-world problem with potential for growth.
 							</p>
 							<p style={{ ...bodyTextStyle, marginBottom: 0 }}>
-								<strong style={{ color: "var(--text)" }}>
+								<strong style={{ color: "#e6fff9" }}>
 									Model Creation:
 								</strong>{" "}
 								A physical or digital prototype/model that clearly represents
@@ -190,30 +219,30 @@ export default function PitchRoomLanding() {
 							</p>
 							<ul style={listStyle}>
 								<li>
-									<strong style={{ color: "var(--text)" }}>
+									<strong style={{ color: "#e6fff9" }}>
 										Business Model Canvas / Idea Poster
 									</strong>
 									: problem, target customers, solution, revenue model, future
 									scope
 								</li>
 								<li>
-									<strong style={{ color: "var(--text)" }}>
+									<strong style={{ color: "#e6fff9" }}>
 										Working Prototype
 									</strong>
 									: functional prototype or demo, if applicable
 								</li>
 								<li>
-									<strong style={{ color: "var(--text)" }}>Pitch Deck</strong>:
+									<strong style={{ color: "#e6fff9" }}>Pitch Deck</strong>:
 									optional for exhibition, mandatory for the pitching round
 								</li>
 								<li>
-									<strong style={{ color: "var(--text)" }}>
+									<strong style={{ color: "#e6fff9" }}>
 										Marketing Materials
 									</strong>
 									: brochures, posters, visiting cards, samples, QR codes
 								</li>
 								<li>
-									<strong style={{ color: "var(--text)" }}>
+									<strong style={{ color: "#e6fff9" }}>
 										Interactive Elements
 									</strong>
 									: live demos, videos, surveys, customer interactions, or
@@ -226,14 +255,14 @@ export default function PitchRoomLanding() {
 						<div style={cardStyle}>
 							<h2 style={sectionTitleStyle}>Pitching Rounds</h2>
 							<p style={bodyTextStyle}>
-								<strong style={{ color: "var(--text)" }}>
+								<strong style={{ color: "#e6fff9" }}>
 									Round 1 — Product Explanation (5 minutes):
 								</strong>{" "}
 								Introduce the business idea, product/service, USP, target
 								customers, and key value.
 							</p>
 							<p style={bodyTextStyle}>
-								<strong style={{ color: "var(--text)" }}>
+								<strong style={{ color: "#e6fff9" }}>
 									Round 2 — Problem Solving (5 minutes):
 								</strong>{" "}
 								Explain the real-world problem, proposed solution, and its
@@ -241,7 +270,7 @@ export default function PitchRoomLanding() {
 								scenarios.
 							</p>
 							<p style={bodyTextStyle}>
-								<strong style={{ color: "var(--text)" }}>
+								<strong style={{ color: "#e6fff9" }}>
 									Round 3 — Final Pitch (5 + 5 minutes Q&amp;A):
 								</strong>{" "}
 								Present the complete business pitch in 5 minutes, followed by a
@@ -249,7 +278,7 @@ export default function PitchRoomLanding() {
 							</p>
 							<p
 								style={{
-									color: "var(--text-dim)",
+									color: "#7ec9c2",
 									fontSize: "0.8rem",
 									letterSpacing: "1.5px",
 									marginTop: "20px",
@@ -270,31 +299,38 @@ export default function PitchRoomLanding() {
 						<div style={cardStyle}>
 							<h2 style={sectionTitleStyle}>Registration Hub</h2>
 							<p style={bodyTextStyle}>
-								<strong style={{ color: "var(--text)" }}>
+								<strong style={{ color: "#e6fff9" }}>
 									Registration:
 								</strong>{" "}
 								Teams must register online within the given deadline to
 								participate in the event.
 							</p>
 							<p style={bodyTextStyle}>
-								<strong style={{ color: "var(--text)" }}>
+								<strong style={{ color: "#e6fff9" }}>
 									Business Summary:
 								</strong>{" "}
 								A one-page summary of the business idea must be submitted
 								during registration.
 							</p>
 							<p style={{ ...bodyTextStyle, marginBottom: "24px" }}>
-								<strong style={{ color: "var(--text)" }}>Shortlisting:</strong>{" "}
+								<strong style={{ color: "#e6fff9" }}>Shortlisting:</strong>{" "}
 								Selected teams will be informed in advance and will proceed to
 								the next round.
 							</p>
 							<Link
 								href="/pitchroom/register"
-								className="btn btn-gold"
+								className="btn"
 								style={{
 									display: "inline-flex",
 									justifyContent: "center",
 									width: "100%",
+									background: "linear-gradient(90deg, #5eead4 0%, #38bdf8 100%)",
+									color: "#04121c",
+									fontWeight: 700,
+									border: "none",
+									padding: "14px",
+									borderRadius: "12px",
+									textDecoration: "none",
 								}}>
 								Register Now
 							</Link>
@@ -304,28 +340,28 @@ export default function PitchRoomLanding() {
 						<div style={cardStyle}>
 							<h2 style={sectionTitleStyle}>Code of Conduct</h2>
 							<p style={bodyTextStyle}>
-								<strong style={{ color: "var(--text)" }}>
+								<strong style={{ color: "#e6fff9" }}>
 									1. Originality:
 								</strong>{" "}
 								Teams must present their own unique ideas. Any copied or
 								plagiarized content will lead to disqualification.
 							</p>
 							<p style={bodyTextStyle}>
-								<strong style={{ color: "var(--text)" }}>
+								<strong style={{ color: "#e6fff9" }}>
 									2. Professionalism:
 								</strong>{" "}
 								Participants must maintain proper behavior, discipline, and
 								ethical conduct throughout the event.
 							</p>
 							<p style={bodyTextStyle}>
-								<strong style={{ color: "var(--text)" }}>
+								<strong style={{ color: "#e6fff9" }}>
 									3. Time Adherence:
 								</strong>{" "}
 								Teams must complete their presentation within the given time
 								limit. Exceeding it may result in penalties.
 							</p>
 							<p style={{ ...bodyTextStyle, marginBottom: 0 }}>
-								<strong style={{ color: "var(--text)" }}>
+								<strong style={{ color: "#e6fff9" }}>
 									4. Decision of Judges:
 								</strong>{" "}
 								The judging panel's decision will be considered final and
@@ -347,7 +383,7 @@ export default function PitchRoomLanding() {
 							</ul>
 							<p
 								style={{
-									color: "var(--text-dim)",
+									color: "#7ec9c2",
 									fontSize: "0.8rem",
 									letterSpacing: "1.5px",
 									marginTop: "20px",
@@ -371,7 +407,7 @@ export default function PitchRoomLanding() {
 							<h2 style={sectionTitleStyle}>Contacts</h2>
 							<p
 								style={{
-									color: "var(--text-dim)",
+									color: "#7ec9c2",
 									fontSize: "0.8rem",
 									letterSpacing: "1.5px",
 									marginBottom: "10px",
@@ -386,7 +422,7 @@ export default function PitchRoomLanding() {
 							</p>
 							<p
 								style={{
-									color: "var(--text-dim)",
+									color: "#7ec9c2",
 									fontSize: "0.8rem",
 									letterSpacing: "1.5px",
 									marginBottom: "10px",
