@@ -455,7 +455,7 @@ export default function PitchRoomRegister() {
 								<div style={{ marginBottom: "24px", textAlign: "center" }}>
 									<label style={labelStyle}>PAYMENT QR CODE</label>
 									<img
-										src="/PitchRoom_QR.jpg"
+										src="/PitchRoom_QR.jpeg"
 										alt="Pitch Room Payment QR Code"
 										style={{
 											maxWidth: "200px",
