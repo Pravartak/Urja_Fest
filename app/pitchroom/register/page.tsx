@@ -352,11 +352,35 @@ export default function Register() {
 			<div className="cosmic-vignette" />
 			<div className="page-wrap">
 				<section className="register-hero hackhive-registration-hero">
-					{/* <LcdBoard
-					text="Register"
-					align="center"
-					className="hackhive-registration-board"
-					/> */}
+					<p
+						style={{
+							textAlign: "center",
+							color: "#7ec9c2",
+							fontSize: "clamp(1.6rem, 4vw, 2.4rem)",
+							letterSpacing: "5px",
+							fontWeight: 700,
+							textTransform: "uppercase",
+							marginBottom: "12px",
+						}}>
+						The Pitch Room
+					</p>
+					<h1
+						style={{
+							textAlign: "center",
+							fontSize: "clamp(3rem, 8vw, 4.5rem)",
+							fontWeight: 800,
+							letterSpacing: "2px",
+							textTransform: "uppercase",
+							backgroundImage:
+								"linear-gradient(90deg, #5eead4 0%, #38bdf8 100%)",
+							WebkitBackgroundClip: "text",
+							backgroundClip: "text",
+							color: "transparent",
+							WebkitTextFillColor: "transparent",
+							margin: 0,
+						}}>
+						Register
+					</h1>
 				</section>
 
 				<section className="section">
@@ -364,8 +388,8 @@ export default function Register() {
 						{submitted ? (
 							<div
 								style={{
-									background: "rgba(80, 220, 140, 0.15)",
-									border: "1px solid rgba(80, 220, 140, 0.5)",
+									background: "rgba(94, 234, 212, 0.12)",
+									border: "1px solid rgba(94, 234, 212, 0.4)",
 									borderRadius: "18px",
 									padding: "40px",
 									textAlign: "center",
@@ -375,11 +399,16 @@ export default function Register() {
 									style={{
 										fontSize: "1.5rem",
 										marginBottom: "10px",
-										color: "var(--gold)",
+										backgroundImage:
+											"linear-gradient(90deg, #5eead4 0%, #38bdf8 100%)",
+										WebkitBackgroundClip: "text",
+										backgroundClip: "text",
+										color: "transparent",
+										WebkitTextFillColor: "transparent",
 									}}>
 									Registration Successful!
 								</h3>
-								<p style={{ color: "var(--text-dim)" }}>
+								<p style={{ color: "#a7f3e0" }}>
 									Welcome to URJA 2026! Your registration details have been sent
 									for approval.
 								</p>
@@ -388,17 +417,19 @@ export default function Register() {
 							<form
 								onSubmit={handleSubmit}
 								style={{
-									background: "var(--card)",
-									border: "1px solid var(--border)",
+									background: "rgba(10, 20, 45, 0.55)",
+									border: "1px solid rgba(94, 234, 212, 0.25)",
 									borderRadius: "18px",
 									padding: "40px",
+									backdropFilter: "blur(6px)",
+									boxShadow: "0 0 30px rgba(56, 189, 248, 0.08)",
 								}}>
 								<div style={{ marginBottom: "24px" }}>
 									<label
 										style={{
 											display: "block",
 											marginBottom: "10px",
-											color: "var(--text-dim)",
+											color: "#7ec9c2",
 											fontSize: "0.8rem",
 											letterSpacing: "1.5px",
 										}}>
@@ -414,10 +445,10 @@ export default function Register() {
 										style={{
 											width: "100%",
 											borderRadius: "10px",
-											color: "var(--text)",
+											color: "#e6fff9",
 											padding: "14px 16px",
-											border: "1px solid var(--border)",
-											background: "var(--input-bg)",
+											border: "1px solid rgba(94, 234, 212, 0.3)",
+											background: "rgba(4, 18, 28, 0.6)",
 											fontSize: "0.95rem",
 											fontFamily: "inherit",
 										}}
@@ -429,8 +460,8 @@ export default function Register() {
 										style={{
 											display: "block",
 											marginBottom: "10px",
-											color: "var(--text-dim)", // Changed from --text-dim
-											fontSize: "0.8rem", // Changed from 0.75rem
+											color: "#7ec9c2",
+											fontSize: "0.8rem",
 											letterSpacing: "1.5px",
 										}}>
 										YOUR EMAIL ID
@@ -445,10 +476,10 @@ export default function Register() {
 										style={{
 											width: "100%",
 											borderRadius: "10px",
-											color: "var(--text)",
+											color: "#e6fff9",
 											padding: "14px 16px",
-											border: "1px solid var(--border)",
-											background: "var(--input-bg)",
+											border: "1px solid rgba(94, 234, 212, 0.3)",
+											background: "rgba(4, 18, 28, 0.6)",
 											fontSize: "0.95rem",
 											fontFamily: "inherit",
 										}}
@@ -460,7 +491,7 @@ export default function Register() {
 										style={{
 											display: "block",
 											marginBottom: "10px",
-											color: "var(--text-dim)",
+											color: "#7ec9c2",
 											fontSize: "0.8rem",
 											letterSpacing: "1.5px",
 										}}>
@@ -475,10 +506,10 @@ export default function Register() {
 										style={{
 											width: "100%",
 											borderRadius: "10px",
-											color: "var(--text)",
+											color: "#e6fff9",
 											padding: "14px 16px",
-											border: "1px solid var(--border)",
-											background: "var(--input-bg)",
+											border: "1px solid rgba(94, 234, 212, 0.3)",
+											background: "rgba(4, 18, 28, 0.6)",
 											fontSize: "0.95rem",
 											fontFamily: "inherit",
 										}}>
@@ -505,8 +536,8 @@ export default function Register() {
 										style={{
 											display: "block",
 											marginBottom: "10px",
-											color: "var(--text-dim)", // Changed from --text-dim
-											fontSize: "0.8rem", // Changed from 0.75rem
+											color: "#7ec9c2",
+											fontSize: "0.8rem",
 											letterSpacing: "1.5px",
 										}}>
 										YOUR CONTACT NUMBER
@@ -521,10 +552,10 @@ export default function Register() {
 										style={{
 											width: "100%",
 											borderRadius: "10px",
-											color: "var(--text)",
+											color: "#e6fff9",
 											padding: "14px 16px",
-											border: "1px solid var(--border)",
-											background: "var(--input-bg)",
+											border: "1px solid rgba(94, 234, 212, 0.3)",
+											background: "rgba(4, 18, 28, 0.6)",
 											fontSize: "0.95rem",
 											fontFamily: "inherit",
 										}}
@@ -535,7 +566,7 @@ export default function Register() {
 										style={{
 											display: "block",
 											marginBottom: "10px",
-											color: "var(--text-dim)",
+											color: "#7ec9c2",
 											fontSize: "0.8rem",
 											letterSpacing: "1.5px",
 										}}>
@@ -545,10 +576,10 @@ export default function Register() {
 										style={{
 											width: "100%",
 											borderRadius: "10px",
-											color: "var(--text)",
+											color: "#e6fff9",
 											padding: "14px 16px",
-											border: "1px solid var(--border)",
-											background: "var(--input-bg)",
+											border: "1px solid rgba(94, 234, 212, 0.3)",
+											background: "rgba(4, 18, 28, 0.6)",
 											fontSize: "0.95rem",
 										}}>
 										{loading
@@ -564,7 +595,7 @@ export default function Register() {
 										style={{
 											display: "flex",
 											alignItems: "center",
-											color: "var(--text-dim)",
+											color: "#7ec9c2",
 											fontSize: "0.8rem",
 											letterSpacing: "1.5px",
 										}}>
@@ -585,7 +616,7 @@ export default function Register() {
 											style={{
 												display: "block",
 												marginBottom: "10px",
-												color: "var(--text-dim)",
+												color: "#7ec9c2",
 												fontSize: "0.8rem",
 												letterSpacing: "1.5px",
 											}}>
@@ -601,10 +632,10 @@ export default function Register() {
 											style={{
 												width: "100%",
 												borderRadius: "10px",
-												color: "var(--text)",
+												color: "#e6fff9",
 												padding: "14px 16px",
-												border: "1px solid var(--border)",
-												background: "var(--input-bg)",
+												border: "1px solid rgba(94, 234, 212, 0.3)",
+												background: "rgba(4, 18, 28, 0.6)",
 												fontSize: "0.95rem",
 												fontFamily: "inherit",
 											}}
@@ -615,7 +646,7 @@ export default function Register() {
 											style={{
 												display: "block",
 												marginBottom: "10px",
-												color: "var(--text-dim)",
+												color: "#7ec9c2",
 												fontSize: "0.8rem",
 												letterSpacing: "1.5px",
 											}}>
@@ -631,10 +662,10 @@ export default function Register() {
 											style={{
 												width: "100%",
 												borderRadius: "10px",
-												color: "var(--text)",
+												color: "#e6fff9",
 												padding: "14px 16px",
-												border: "1px solid var(--border)",
-												background: "var(--input-bg)",
+												border: "1px solid rgba(94, 234, 212, 0.3)",
+												background: "rgba(4, 18, 28, 0.6)",
 												fontSize: "0.95rem",
 												fontFamily: "inherit",
 											}}
@@ -645,7 +676,7 @@ export default function Register() {
 											style={{
 												display: "block",
 												marginBottom: "10px",
-												color: "var(--text-dim)",
+												color: "#7ec9c2",
 												fontSize: "0.8rem",
 												letterSpacing: "1.5px",
 											}}>
@@ -661,10 +692,10 @@ export default function Register() {
 											style={{
 												width: "100%",
 												borderRadius: "10px",
-												color: "var(--text)",
+												color: "#e6fff9",
 												padding: "14px 16px",
-												border: "1px solid var(--border)",
-												background: "var(--input-bg)",
+												border: "1px solid rgba(94, 234, 212, 0.3)",
+												background: "rgba(4, 18, 28, 0.6)",
 												fontSize: "0.95rem",
 												fontFamily: "inherit",
 											}}
@@ -676,7 +707,7 @@ export default function Register() {
 												style={{
 													display: "block",
 													marginBottom: "10px",
-													color: "var(--text-dim)",
+													color: "#7ec9c2",
 													fontSize: "0.8rem",
 													letterSpacing: "1.5px",
 												}}>
@@ -692,10 +723,10 @@ export default function Register() {
 												style={{
 													width: "100%",
 													borderRadius: "10px",
-													color: "var(--text)",
+													color: "#e6fff9",
 													padding: "14px 16px",
-													border: "1px solid var(--border)",
-													background: "var(--input-bg)",
+													border: "1px solid rgba(94, 234, 212, 0.3)",
+													background: "rgba(4, 18, 28, 0.6)",
 													fontSize: "0.95rem",
 													fontFamily: "inherit",
 												}}
@@ -710,7 +741,7 @@ export default function Register() {
 											style={{
 												display: "block",
 												marginBottom: "10px",
-												color: "var(--text-dim)",
+												color: "#7ec9c2",
 												fontSize: "0.8rem",
 												letterSpacing: "1.5px",
 											}}>
@@ -723,7 +754,7 @@ export default function Register() {
 												maxWidth: "200px",
 												height: "auto",
 												borderRadius: "10px",
-												border: "1px solid var(--border)",
+												border: "1px solid rgba(94, 234, 212, 0.3)",
 												margin: "0 auto",
 												display: "block",
 											}}
@@ -736,7 +767,7 @@ export default function Register() {
 										style={{
 											display: "block",
 											marginBottom: "10px",
-											color: "var(--text-dim)",
+											color: "#7ec9c2",
 											fontSize: "0.8rem",
 											letterSpacing: "1.5px",
 										}}>
@@ -751,10 +782,10 @@ export default function Register() {
 										style={{
 											width: "100%",
 											borderRadius: "10px",
-											color: "var(--text)",
+											color: "#e6fff9",
 											padding: "14px 16px",
-											border: "1px solid var(--border)",
-											background: "var(--input-bg)",
+											border: "1px solid rgba(94, 234, 212, 0.3)",
+											background: "rgba(4, 18, 28, 0.6)",
 											fontSize: "0.95rem",
 											fontFamily: "inherit",
 										}}
@@ -771,9 +802,26 @@ export default function Register() {
 
 								<button
 									type="submit"
-									className="btn btn-gold"
 									disabled={submitting || loading || colleges.length === 0}
-									style={{ width: "100%", justifyContent: "center" }}>
+									style={{
+										width: "100%",
+										justifyContent: "center",
+										display: "flex",
+										background:
+											"linear-gradient(90deg, #5eead4 0%, #38bdf8 100%)",
+										color: "#04121c",
+										fontWeight: 700,
+										border: "none",
+										padding: "14px",
+										borderRadius: "12px",
+										fontSize: "0.95rem",
+										cursor:
+											submitting || loading || colleges.length === 0
+												? "not-allowed"
+												: "pointer",
+										opacity:
+											submitting || loading || colleges.length === 0 ? 0.6 : 1,
+									}}>
 									{submitting ? "Submitting..." : "Register Now"}
 								</button>
 
@@ -781,7 +829,7 @@ export default function Register() {
 									style={{
 										marginTop: "24px",
 										maxWidth: "100%",
-										color: "var(--text-dim)",
+										color: "#7ec9c2",
 										fontSize: "0.82rem",
 										textAlign: "center",
 									}}>
