@@ -31,6 +31,7 @@ export interface LcdBoardProps {
 	contrast?: number;
 	/** Tilt the board towards the pointer. */
 	interactive?: boolean;
+	onReady?: () => void;
 	className?: string;
 	style?: CSSProperties;
 }
@@ -340,8 +341,8 @@ function makePcbCanvas(): HTMLCanvasElement {
 
 	// Solder mask
 	const base = ctx.createLinearGradient(0, 0, PCB_TEX_W, PCB_TEX_H);
-	base.addColorStop(0, "#0300bf");
-	base.addColorStop(1, "#011775");
+	base.addColorStop(0, "#075985");
+	base.addColorStop(1, "#074f76");
 	ctx.fillStyle = base;
 	ctx.fillRect(0, 0, PCB_TEX_W, PCB_TEX_H);
 
@@ -367,21 +368,21 @@ function makePcbCanvas(): HTMLCanvasElement {
 		};
 		ctx.lineJoin = "round";
 		ctx.lineCap = "round";
-		ctx.strokeStyle = "#136b2d";
+		ctx.strokeStyle = "#38BDF8";
 		ctx.lineWidth = (wmm + 0.14) * S;
 		path();
 		ctx.stroke();
-		ctx.strokeStyle = "#31b25a";
+		ctx.strokeStyle = "#38BDF8";
 		ctx.lineWidth = wmm * S;
 		path();
 		ctx.stroke();
 	};
 	const via = (x: number, z: number) => {
-		ctx.fillStyle = "#136b2d";
+		ctx.fillStyle = "#38BDF8";
 		ctx.beginPath();
 		ctx.arc(X(x), Y(z), 0.5 * S, 0, Math.PI * 2);
 		ctx.fill();
-		ctx.fillStyle = "#31b25a";
+		ctx.fillStyle = "#4cc9ff";
 		ctx.beginPath();
 		ctx.arc(X(x), Y(z), 0.36 * S, 0, Math.PI * 2);
 		ctx.fill();
@@ -489,9 +490,9 @@ function makePcbCanvas(): HTMLCanvasElement {
 			Y(z),
 			HOLE_RING_R * S,
 		);
-		grad.addColorStop(0, "#c39a3a");
-		grad.addColorStop(0.5, "#eecf78");
-		grad.addColorStop(1, "#b98f30");
+		grad.addColorStop(0, "#b98f30");
+		grad.addColorStop(0.5, "#38BDF8");
+		grad.addColorStop(1, "#38BDF8");
 		ctx.fillStyle = grad;
 		ctx.beginPath();
 		ctx.arc(X(x), Y(z), HOLE_RING_R * S, 0, Math.PI * 2);
@@ -609,6 +610,7 @@ export default function LcdBoard({
 	backlightColor = "#6fa697",
 	contrast = 0.7,
 	interactive = true,
+	onReady,
 	className,
 	style,
 }: LcdBoardProps) {
@@ -622,8 +624,16 @@ export default function LcdBoard({
 		backlightColor,
 		contrast,
 		interactive,
+		onReady,
 	});
-	propsRef.current = { text, align, backlightColor, contrast, interactive };
+	propsRef.current = {
+		text,
+		align,
+		backlightColor,
+		contrast,
+		interactive,
+		onReady,
+	};
 
 	/* ---- Build the scene once ------------------------------------- */
 	useEffect(() => {
@@ -848,6 +858,7 @@ export default function LcdBoard({
 			"(prefers-reduced-motion: reduce)",
 		).matches;
 		let visible = true;
+		let hasReportedReady = false;
 		const io = new IntersectionObserver(([entry]) => {
 			visible = entry.isIntersecting;
 		});
@@ -868,7 +879,15 @@ export default function LcdBoard({
 			pivot.rotation.x = BASE_TILT + cur.y * 0.18 + idlePitch;
 			pivot.rotation.y = cur.x * 0.32 + idleYaw;
 			renderer.render(scene, camera);
+			if (!hasReportedReady) {
+				hasReportedReady = true;
+				propsRef.current.onReady?.();
+			}
 		};
+		// The loader should not depend on IntersectionObserver timing.
+		renderer.render(scene, camera);
+		hasReportedReady = true;
+		propsRef.current.onReady?.();
 		tick();
 
 		/* Cleanup */

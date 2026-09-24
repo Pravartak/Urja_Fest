@@ -4,8 +4,10 @@ import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
 import { Environment, OrbitControls, RoundedBox, Text } from "@react-three/drei";
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 // import Navbar from "../components/Navbar";
-import Footer from "../../components/Footer";
+// import Footer from "../../components/Footer";
+import PCBBackground from "../../components/PCBBackground";
 import { formatEventDateTime } from "../../events/page";
 import { db, storage } from "@/lib/firebase";
 import {
@@ -20,7 +22,11 @@ import {
 	ref as storageRef,
 	uploadBytes,
 } from "firebase/storage";
-import LcdBoard from "@/app/components/CircuitBoard";
+
+const LcdBoard = dynamic(() => import("@/app/components/CircuitBoard"), {
+	ssr: false,
+	loading: () => <div className="hackhive-registration-board lcd-board" aria-hidden="true" />,
+});
 
 type RegistrationEvent = {
 	Id: number | string;
@@ -42,6 +48,7 @@ type College = {
 	const HACKHIVE_EVENT_NAME = "HackHive Hackathon";
 
 export default function Register() {
+	const [boardReady, setBoardReady] = useState(false);
 	const [colleges, setColleges] = useState<College[]>([]);
 	const [day2Events, setDay2Events] = useState<RegistrationEvent[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -350,14 +357,21 @@ export default function Register() {
 
 	return (
 		<>
-			<div className="cosmic-bg" />
-			<div className="cosmic-vignette" />
-			<div className="page-wrap">
-				<section className="register-hero hackhive-registration-hero">
+			{!boardReady && (
+				<div className="hackhive-loader" role="status" aria-live="polite">
+					<div className="hackhive-loader-orbit" aria-hidden="true" />
+					<p>Loading Application...</p>
+				</div>
+			)}
+			<PCBBackground className="page-wrap hackhive-page-background">
+				<section
+					className={`register-hero hackhive-registration-hero hackhive-registration-hero--compact${boardReady ? " is-ready" : ""}`}
+				>
 					<LcdBoard
 						text="Register"
 						align="center"
-						className="hackhive-registration-board"
+						className="hackhive-registration-board lcd-board"
+						onReady={() => setBoardReady(true)}
 					/>
 				</section>
 
@@ -793,9 +807,7 @@ export default function Register() {
 						)}
 					</div>
 				</section>
-			</div>
-
-			<Footer />
+			</PCBBackground>
 		</>
 	);
 }
