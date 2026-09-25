@@ -2016,12 +2016,47 @@ img {
 
 @media (max-width: 520px) {
   .hackhive-event-info {
-    width: min(100% - 32px, 420px);
-    padding: 54px 0 80px;
+    width: min(100% - 28px, 420px);
+    padding: 64px 0 96px;
+  }
+
+  .hackhive-section-kicker,
+  .hackhive-event-card-index {
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+  }
+
+  .hackhive-event-info h2 {
+    max-width: 290px;
+    margin: 18px 0 18px;
+    font-size: clamp(1.7rem, 9vw, 2.35rem);
+    line-height: 1.08;
+  }
+
+  .hackhive-event-intro {
+    margin-bottom: 42px;
+    font-size: 0.94rem;
+    line-height: 1.8;
   }
 
   .hackhive-event-grid {
     grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .hackhive-event-card {
+    min-height: 0;
+    padding: 24px 22px 28px;
+  }
+
+  .hackhive-event-card h3 {
+    margin-top: 34px;
+    font-size: 1rem;
+  }
+
+  .hackhive-event-card p {
+    font-size: 0.9rem;
+    line-height: 1.75;
   }
 }
 
