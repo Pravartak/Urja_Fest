@@ -89,6 +89,37 @@ export default function HackHive() {
 						<span className="hackhive-register-cta-terminal" aria-hidden="true">↗</span>
 					</a>
 				</div>
+
+				<footer className="hackhive-footer">
+					<div className="hackhive-footer-line" aria-hidden="true" />
+					<div className="hackhive-footer-grid">
+						<div className="hackhive-footer-brand">
+							<span className="hackhive-footer-kicker">// SIGNAL ONLINE</span>
+							<strong>HackHive</strong>
+							<p>Build beyond the ordinary.</p>
+						</div>
+						<div className="hackhive-footer-meta">
+							<div>
+								<span className="hackhive-footer-label">Developed by</span>
+								<span>HackHive Tech Team</span>
+							</div>
+							<div>
+								<span className="hackhive-footer-label">Organized by</span>
+								<span>Urja Fest Organizers</span>
+							</div>
+						</div>
+						<div className="hackhive-footer-socials">
+							<span className="hackhive-footer-label">Transmit</span>
+							<a href="https://instagram.com/hackhive" target="_blank" rel="noreferrer">Instagram @hackhive</a>
+							<a href="https://instagram.com/urjafest" target="_blank" rel="noreferrer">Instagram @urjafest</a>
+						</div>
+					</div>
+					<div className="hackhive-footer-copyright">
+						<span aria-hidden="true">[ SYS.OK ]</span>
+						<span>© 2026 HackHive // All systems reserved</span>
+						<span aria-hidden="true">[ END OF LINE ]</span>
+					</div>
+				</footer>
 			</PCBBackground>
 		</>
 	);
