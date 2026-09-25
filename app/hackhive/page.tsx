@@ -43,6 +43,14 @@ export default function HackHive() {
 					</div>
 				</section>
 
+				<div className="hackhive-register-cta-wrap">
+					<a className="hackhive-register-cta" href="/hackhive/registration">
+						<span className="hackhive-register-cta-led" aria-hidden="true" />
+						<span>Initialize Registration</span>
+						<span className="hackhive-register-cta-terminal" aria-hidden="true">↗</span>
+					</a>
+				</div>
+
 				<section className="hackhive-event-info" aria-labelledby="hackhive-event-info-title">
 					<div className="hackhive-section-kicker">// EVENT CORE :: 2026</div>
 					<h2 id="hackhive-event-info-title">Build beyond the ordinary</h2>
@@ -73,6 +81,14 @@ export default function HackHive() {
 						</article>
 					</div>
 				</section>
+
+				<div className="hackhive-register-cta-wrap hackhive-register-cta-wrap-after">
+					<a className="hackhive-register-cta" href="/hackhive/registration">
+						<span className="hackhive-register-cta-led" aria-hidden="true" />
+						<span>Initialize Registration</span>
+						<span className="hackhive-register-cta-terminal" aria-hidden="true">↗</span>
+					</a>
+				</div>
 			</PCBBackground>
 		</>
 	);
