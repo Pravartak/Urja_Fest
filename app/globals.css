@@ -994,10 +994,10 @@ img {
 
 .hackhive-registration-hero {
   position: relative;
-
-  min-height: 400px;
-  height: 56dvh;
-  max-height: 60dvh;
+  
+  min-height: 440px;
+  height: auto;
+  max-height: none;
   width: 100%;
 
   display: flex;
@@ -1010,10 +1010,10 @@ img {
      height/max-height cap above, so the hero never exceeds 60dvh. */
   padding: 128px 24px 32px;
 
-  overflow: hidden;
-}
-
-.hackhive-registration-hero--compact {
+  overflow: visible;
+  }
+  
+  .hackhive-registration-hero--compact {
   min-height: 280px;
   height: 40dvh;
   max-height: 60dvh;
