@@ -195,6 +195,75 @@ const traces = [
 			{ left: "61%", top: "69%" },
 		],
 	},
+
+	// Display power and data bus: routes into the center display from both sides.
+	{
+		className: "trace trace-11",
+		segments: [
+			{ type: "horizontal", style: { left: "18%", top: "31%", width: "24%" } },
+			{ type: "vertical", style: { left: "42%", top: "31%", height: "9%" } },
+			{ type: "horizontal", style: { left: "42%", top: "40%", width: "16%" } },
+			{ type: "vertical", style: { left: "58%", top: "40%", height: "9%" } },
+			{ type: "horizontal", style: { left: "58%", top: "49%", width: "24%" } },
+		],
+		nodes: [
+			{ left: "18%", top: "31%" },
+			{ left: "42%", top: "40%" },
+			{ left: "58%", top: "49%" },
+			{ left: "82%", top: "49%" },
+		],
+	},
+
+	// Lower shared bus linking the event cards and sponsor components.
+	{
+		className: "trace trace-12",
+		segments: [
+			{ type: "horizontal", style: { left: "8%", top: "73%", width: "21%" } },
+			{ type: "vertical", style: { left: "29%", top: "63%", height: "10%" } },
+			{ type: "horizontal", style: { left: "29%", top: "63%", width: "42%" } },
+			{ type: "vertical", style: { left: "71%", top: "63%", height: "10%" } },
+			{ type: "horizontal", style: { left: "71%", top: "73%", width: "21%" } },
+		],
+		nodes: [
+			{ left: "8%", top: "73%" },
+			{ left: "29%", top: "63%" },
+			{ left: "50%", top: "63%" },
+			{ left: "71%", top: "63%" },
+			{ left: "92%", top: "73%" },
+		],
+	},
+
+	// Vertical rails connect the upper components to the lower shared bus.
+	{
+		className: "trace trace-13",
+		segments: [
+			{ type: "vertical", style: { left: "14%", top: "24%", height: "49%" } },
+			{ type: "vertical", style: { left: "86%", top: "24%", height: "49%" } },
+		],
+		nodes: [
+			{ left: "14%", top: "24%" },
+			{ left: "14%", top: "73%" },
+			{ left: "86%", top: "24%" },
+			{ left: "86%", top: "73%" },
+		],
+	},
+
+	// Fine parallel traces add realistic routed signal lanes around the display.
+	{
+		className: "trace trace-14",
+		segments: [
+			{ type: "horizontal", style: { left: "22%", top: "34%", width: "16%" } },
+			{ type: "horizontal", style: { left: "62%", top: "34%", width: "16%" } },
+			{ type: "horizontal", style: { left: "22%", top: "37%", width: "12%" } },
+			{ type: "horizontal", style: { left: "66%", top: "37%", width: "12%" } },
+		],
+		nodes: [
+			{ left: "22%", top: "34%" },
+			{ left: "78%", top: "34%" },
+			{ left: "22%", top: "37%" },
+			{ left: "78%", top: "37%" },
+		],
+	},
 ];
 
 export default function PCBBackground({
