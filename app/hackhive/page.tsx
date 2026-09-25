@@ -25,7 +25,7 @@ export default function HackHive() {
 						</span>
 					</div>
 					<LcdBoard
-						text="HackHive"
+						text={["HackHive", " Beyond Ordinary"]}
 						align="center"
 						className="lcd-board"
 						onReady={() => setBoardReady(true)}
@@ -55,29 +55,33 @@ export default function HackHive() {
 					<div className="hackhive-section-kicker">// EVENT CORE :: 2026</div>
 					<h2 id="hackhive-event-info-title">Build beyond the ordinary</h2>
 					<p className="hackhive-event-intro">
-						HackHive is a high-voltage gathering for builders, designers, and problem solvers.
-						Plug into a weekend of rapid prototyping, sharp ideas, and real-world impact.
+						HackHive is a hackathon where students and makers come together to build innovative solutions. Whether you're a seasoned developer or a curious beginner, HackHive provides the perfect environment to learn, collaborate, and create.
 					</p>
 					<div className="hackhive-event-grid">
 						<article className="hackhive-event-card">
 							<span className="hackhive-event-card-index">01 / WHEN</span>
-							<h3>13–15 March 2026</h3>
-							<p>Three days of workshops, builds, demos, and late-night collaboration.</p>
+							<h3>27 October 2026</h3>
+							<p>A special 6 hour hackathon experience on this day.</p>
 						</article>
 						<article className="hackhive-event-card">
 							<span className="hackhive-event-card-index">02 / WHERE</span>
-							<h3>VIT-AP University</h3>
-							<p>Amaravati, Andhra Pradesh. The exact venue details will be shared with registered teams.</p>
+							<h3>Bakliwal Foundation College of Arts, Commerce, and Science, Vashi</h3>
+							<p>The exact venue details will be shared with registered teams.</p>
 						</article>
 						<article className="hackhive-event-card">
 							<span className="hackhive-event-card-index">03 / FORMAT</span>
-							<h3>Team-powered sprint</h3>
+							<h3>Play solo or upto 5 members</h3>
 							<p>Bring your strongest idea, form a team, and turn a bold concept into a working prototype.</p>
 						</article>
 						<article className="hackhive-event-card">
 							<span className="hackhive-event-card-index">04 / ACCESS</span>
 							<h3>Open to innovators</h3>
 							<p>Students and makers of every skill level are welcome. Curiosity is the only prerequisite.</p>
+						</article>
+						<article className="hackhive-event-card">
+							<span className="hackhive-event-card-index">04 / Requirements</span>
+							<h3>System requirements</h3>
+							<p>Registered participants must bring their laptops and chargers and we'll make sure the necessary infrastructure is available.</p>
 						</article>
 					</div>
 				</section>
@@ -101,17 +105,17 @@ export default function HackHive() {
 						<div className="hackhive-footer-meta">
 							<div>
 								<span className="hackhive-footer-label">Developed by</span>
-								<span>HackHive Tech Team</span>
+								<span>Computer Association Technical Department</span>
 							</div>
 							<div>
 								<span className="hackhive-footer-label">Organized by</span>
-								<span>Urja Fest Organizers</span>
+								<span>Computer Association of Bakliwal</span>
 							</div>
 						</div>
 						<div className="hackhive-footer-socials">
 							<span className="hackhive-footer-label">Transmit</span>
-							<a href="https://instagram.com/hackhive" target="_blank" rel="noreferrer">Instagram @hackhive</a>
-							<a href="https://instagram.com/urjafest" target="_blank" rel="noreferrer">Instagram @urjafest</a>
+							<a href="https://instagram.com/zen_pravartak" target="_blank" rel="noreferrer">Follow Developer on Instagram</a>
+							<a href="https://instagram.com/bakliwal_.computerassociation" target="_blank" rel="noreferrer">Follow Computer Association on Instagram</a>
 						</div>
 					</div>
 					<div className="hackhive-footer-copyright">

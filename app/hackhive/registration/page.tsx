@@ -368,17 +368,18 @@ export default function Register() {
 					className={`register-hero hackhive-registration-hero hackhive-registration-hero--compact${boardReady ? " is-ready" : ""}`}
 				>
 					<LcdBoard
-						text="Register"
+						text={["Register", " Beyond Ordinary"]}
 						align="center"
 						className="hackhive-registration-board lcd-board"
 						onReady={() => setBoardReady(true)}
 					/>
 				</section>
 
-				<section className="section">
-					<div style={{ maxWidth: "600px", margin: "0 auto" }}>
+				<section className="section hackhive-registration-section">
+					<div className="hackhive-registration-shell">
 						{submitted ? (
 							<div
+								className="hackhive-registration-success"
 								style={{
 									background: "rgba(80, 220, 140, 0.15)",
 									border: "1px solid rgba(80, 220, 140, 0.5)",
@@ -396,12 +397,13 @@ export default function Register() {
 									Registration Successful!
 								</h3>
 								<p style={{ color: "var(--text-dim)" }}>
-									Welcome to URJA 2026! Your registration details have been sent
+									Welcome to HACKHIVE 2026! Your registration details have been sent
 									for approval.
 								</p>
 							</div>
 						) : (
 							<form
+								className="hackhive-registration-form"
 								onSubmit={handleSubmit}
 								style={{
 									background: "var(--card)",
@@ -571,7 +573,7 @@ export default function Register() {
 											? "Loading HackHive Hackathon..."
 											: error
 												? "HackHive Hackathon unavailable"
-												: "HackHive Hackathon"}
+												: "HackHive Hackathon - ₹100 per person"}
 									</div>
 								</div>
 
@@ -779,6 +781,7 @@ export default function Register() {
 
 								{submitError && (
 									<p
+										className="hackhive-registration-error"
 										style={{ color: "#ff8f8f", marginBottom: "16px" }}
 										role="alert">
 										{submitError}
@@ -787,13 +790,14 @@ export default function Register() {
 
 								<button
 									type="submit"
-									className="btn btn-gold"
+									className="btn btn-gold hackhive-registration-submit"
 									disabled={submitting || loading || colleges.length === 0}
 									style={{ width: "100%", justifyContent: "center" }}>
 									{submitting ? "Submitting..." : "Register Now"}
 								</button>
 
 								<p
+									className="hackhive-registration-terms"
 									style={{
 										marginTop: "24px",
 										maxWidth: "100%",
@@ -801,7 +805,7 @@ export default function Register() {
 										fontSize: "0.82rem",
 										textAlign: "center",
 									}}>
-									By registering, you agree to participate in URJA 2026 events.
+									By registering, you agree to participate in HackHive Hackathon 2026.
 								</p>
 							</form>
 						)}
