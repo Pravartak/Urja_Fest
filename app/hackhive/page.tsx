@@ -17,11 +17,10 @@ export default function HackHive() {
 			)}
 			<PCBBackground className="page-wrap hackhive-page-background">
 				<section
-					className={`register-hero hackhive-registration-hero${boardReady ? " is-ready" : ""}`}
-				>
+					className={`register-hero hackhive-registration-hero${boardReady ? " is-ready" : ""}`}>
 					<div className="title-sponsor">
 						<span>
-							<strong className="title-sponsor-label">Title Sponsor</strong>
+							<strong className="title-sponsor-label">Sponsored By</strong>
 							<img src="/galaxy-bg.png" alt="Title Sponsor" />
 						</span>
 					</div>
@@ -32,9 +31,15 @@ export default function HackHive() {
 						onReady={() => setBoardReady(true)}
 					/>
 					<div className="other-sponsors">
-						<img src="/galaxy-bg.png" alt="Sponsor 1" />
-						<img src="/galaxy-bg.png" alt="Sponsor 2" />
-						<img src="/galaxy-bg.png" alt="Sponsor 3" />
+						<span className="sponsor-chip">
+							<img src="/galaxy-bg.png" alt="Sponsor 1" />
+						</span>
+						<span className="sponsor-chip">
+							<img src="/galaxy-bg.png" alt="Sponsor 2" />
+						</span>
+						<span className="sponsor-chip">
+							<img src="/galaxy-bg.png" alt="Sponsor 3" />
+						</span>
 					</div>
 				</section>
 			</PCBBackground>
