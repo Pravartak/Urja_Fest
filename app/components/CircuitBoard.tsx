@@ -341,8 +341,8 @@ function makePcbCanvas(): HTMLCanvasElement {
 
 	// Solder mask
 	const base = ctx.createLinearGradient(0, 0, PCB_TEX_W, PCB_TEX_H);
-	base.addColorStop(0, "#075985");
-	base.addColorStop(1, "#074f76");
+	base.addColorStop(0, "#03141D");
+	base.addColorStop(1, "#00263a");
 	ctx.fillStyle = base;
 	ctx.fillRect(0, 0, PCB_TEX_W, PCB_TEX_H);
 

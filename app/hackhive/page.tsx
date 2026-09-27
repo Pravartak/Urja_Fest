@@ -86,6 +86,14 @@ export default function HackHive() {
 					</div>
 				</section>
 
+				<section className="hackhive-ewaste-section" aria-labelledby="hackhive-ewaste-title">
+					<span className="hackhive-section-kicker">// COMMUNITY CORE :: RESPONSIBILITY</span>
+					<h2 id="hackhive-ewaste-title">E-Waste Management</h2>
+					<p>
+						Students can bring any type of E-Waste with them and submit it at the college. Let&apos;s dispose of electronic waste responsibly and keep our community cleaner.
+					</p>
+				</section>
+
 				<div className="hackhive-register-cta-wrap hackhive-register-cta-wrap-after">
 					<a className="hackhive-register-cta" href="/hackhive/registration">
 						<span className="hackhive-register-cta-led" aria-hidden="true" />

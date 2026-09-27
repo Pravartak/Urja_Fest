@@ -7,7 +7,7 @@ export interface PCBBackgroundProps {
 }
 
 const pcbBackgroundStyle: CSSProperties = {
-	backgroundColor: "#075985",
+	backgroundColor: "#03141D", // Dark PCB background color
 
 	// Subtle PCB texture/grid
 	backgroundImage: `

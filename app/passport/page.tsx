@@ -16,6 +16,16 @@ type Event = {
 	Teams?: string[];
 };
 
+type Team = {
+	id: string;
+	teamLeader?: string;
+	member2?: string;
+	member3?: string;
+	member4?: string;
+	member5?: string;
+	eventName?: string;
+};
+
 type CollegeData = {
 	ClCode?: string;
 	Name?: string;
@@ -54,7 +64,9 @@ export default function CollegeDashboard() {
 
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
 	const [college, setCollege] = useState<CollegeData | null>(null);
+	const [teams, setTeams] = useState<Team[]>([]);
 	const [recentUpdates, setRecentUpdates] = useState<RecentUpdate[]>([]);
+	const [activeDetail, setActiveDetail] = useState<"teams" | "events" | null>(null);
 
 	const [credentialsLoading, setCredentialsLoading] = useState(true);
 	const [dashboardLoading, setDashboardLoading] = useState(false);
@@ -140,6 +152,18 @@ export default function CollegeDashboard() {
 				const collegeData = collegeDoc.data() as CollegeData;
 
 				setCollege(collegeData);
+				const teamsSnapshot = await getDocs(
+					query(
+						collection(db, "Teams"),
+						where("collegeId", "==", collegeDoc.id)
+					)
+				);
+				setTeams(
+					teamsSnapshot.docs.map((teamDoc) => ({
+						id: teamDoc.id,
+						...teamDoc.data(),
+					})) as Team[]
+				);
 
 			const transactionsSnapshot = await getDocs(
 				query(
@@ -379,7 +403,12 @@ export default function CollegeDashboard() {
 				</header>
 
 				<section className="stats-grid">
-					<div className="stat-card">
+					<button
+						type="button"
+						className="stat-card stat-card-button"
+						onClick={() => setActiveDetail("teams")}
+						aria-haspopup="dialog"
+					>
 						<div className="stat-icon">♙</div>
 
 						<div className="stat-content">
@@ -395,7 +424,7 @@ export default function CollegeDashboard() {
 								Registered teams
 							</span>
 						</div>
-					</div>
+					</button>
 
 					<div className="stat-card points-card">
 						<div className="stat-icon gold-icon">✦</div>
@@ -415,7 +444,12 @@ export default function CollegeDashboard() {
 						</div>
 					</div>
 
-					<div className="stat-card">
+					<button
+						type="button"
+						className="stat-card stat-card-button"
+						onClick={() => setActiveDetail("events")}
+						aria-haspopup="dialog"
+					>
 						<div className="stat-icon pink-icon">✧</div>
 
 						<div className="stat-content">
@@ -431,7 +465,7 @@ export default function CollegeDashboard() {
 								Events with registrations
 							</span>
 						</div>
-					</div>
+					</button>
 				</section>
 
 				<section className="updates-card">
@@ -494,6 +528,83 @@ export default function CollegeDashboard() {
 						</div>
 					)}
 				</section>
+
+				{activeDetail && (
+					<div
+						className="detail-overlay"
+						onClick={() => setActiveDetail(null)}
+					>
+						<section
+							className="detail-dialog"
+							role="dialog"
+							aria-modal="true"
+							aria-labelledby="detail-title"
+							onClick={(event) => event.stopPropagation()}
+						>
+							<header className="detail-header">
+								<div>
+									<span className="updates-kicker">
+										{activeDetail === "teams" ? "COLLEGE ROSTER" : "EVENT REGISTRATIONS"}
+									</span>
+									<h2 id="detail-title">
+										{activeDetail === "teams" ? "Registered Teams" : "Registered Events"}
+									</h2>
+								</div>
+								<button
+									type="button"
+									className="detail-close"
+									aria-label="Close details"
+									onClick={() => setActiveDetail(null)}
+								>
+									×
+								</button>
+							</header>
+
+							{activeDetail === "teams" ? (
+								teams.length === 0 ? (
+									<p className="detail-empty">No registered teams found.</p>
+								) : (
+									<div className="detail-list">
+										{teams.map((team, index) => {
+											const members = [
+												team.teamLeader,
+												team.member2,
+												team.member3,
+												team.member4,
+												team.member5,
+											].filter((member): member is string => Boolean(member?.trim()));
+
+												return (
+													<article className="detail-row" key={team.id}>
+														<div className="detail-index">{String(index + 1).padStart(2, "0")}</div>
+														<div className="detail-copy">
+															<strong>{team.teamLeader || `Team ${index + 1}`}</strong>
+															<span>{team.eventName || "Event not specified"}</span>
+															<small>{members.join(", ") || "No member details"}</small>
+														</div>
+													</article>
+												);
+										})}
+									</div>
+								)
+							) : (college.Events ?? []).length === 0 ? (
+								<p className="detail-empty">No events registered yet.</p>
+							) : (
+								<div className="detail-list">
+									{(college.Events ?? []).map((event) => (
+										<article className="detail-row event-detail-row" key={event.Id}>
+											<div className="detail-index">✦</div>
+											<div className="detail-copy">
+												<strong>{event.Name}</strong>
+												<span>{event.Teams?.length ?? 0} registered {event.Teams?.length === 1 ? "team" : "teams"}</span>
+											</div>
+										</article>
+									))}
+								</div>
+							)}
+						</section>
+					</div>
+				)}
 			</div>
 
 			<style jsx>{styles}</style>
@@ -746,6 +857,19 @@ const styles = `
 		transition: all 0.3s ease;
 	}
 
+	.stat-card-button {
+		width: 100%;
+		color: inherit;
+		font: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+
+	.stat-card-button:focus-visible {
+		outline: 2px solid #d4af37;
+		outline-offset: 3px;
+	}
+
 	.stat-card:hover {
 		transform: translateY(-2px);
 		box-shadow: 0 8px 25px rgba(212, 175, 55, 0.08);
@@ -953,6 +1077,120 @@ const styles = `
 		line-height: 1.6;
 	}
 
+	.detail-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 200;
+		display: grid;
+		place-items: center;
+		padding: 20px;
+		background: rgba(5, 3, 12, 0.78);
+		backdrop-filter: blur(7px);
+	}
+
+	.detail-dialog {
+		width: min(620px, 100%);
+		max-height: min(78vh, 720px);
+		display: flex;
+		flex-direction: column;
+		background: rgba(20, 10, 40, 0.98);
+		border: 2px solid #512a65;
+		border-radius: 12px;
+		box-shadow: 0 0 35px rgba(212, 175, 55, 0.14);
+		overflow: hidden;
+	}
+
+	.detail-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 22px 24px 18px;
+		border-bottom: 1px solid rgba(81, 42, 101, 0.65);
+	}
+
+	.detail-header h2 {
+		margin: 6px 0 0;
+		color: #ffffff;
+		font-size: 21px;
+		text-transform: uppercase;
+	}
+
+	.detail-close {
+		width: 36px;
+		height: 36px;
+		flex: 0 0 36px;
+		border: 1px solid rgba(212, 175, 55, 0.35);
+		border-radius: 6px;
+		background: rgba(212, 175, 55, 0.08);
+		color: #d4af37;
+		font-size: 25px;
+		line-height: 1;
+		cursor: pointer;
+	}
+
+	.detail-list {
+		padding: 0 24px;
+		overflow-y: auto;
+	}
+
+	.detail-row {
+		display: flex;
+		align-items: flex-start;
+		gap: 14px;
+		padding: 17px 0;
+		border-bottom: 1px solid rgba(81, 42, 101, 0.38);
+	}
+
+	.detail-row:last-child {
+		border-bottom: 0;
+	}
+
+	.detail-index {
+		width: 38px;
+		height: 38px;
+		flex: 0 0 38px;
+		display: grid;
+		place-items: center;
+		border: 1px solid rgba(212, 175, 55, 0.35);
+		border-radius: 7px;
+		background: rgba(212, 175, 55, 0.08);
+		color: #d4af37;
+		font-size: 13px;
+		font-weight: 700;
+	}
+
+	.detail-copy {
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.detail-copy strong {
+		color: #ffffff;
+		font-size: 14px;
+	}
+
+	.detail-copy span {
+		color: #d4af37;
+		font-size: 11px;
+	}
+
+	.detail-copy small {
+		color: #999999;
+		font-size: 11px;
+		line-height: 1.5;
+		overflow-wrap: anywhere;
+	}
+
+	.detail-empty {
+		padding: 28px 24px;
+		color: #999999;
+		font-size: 13px;
+		text-align: center;
+	}
+
 	.loading-card,
 	.error-card {
 		width: min(420px, 100%);
@@ -1060,6 +1298,16 @@ const styles = `
 
 		.earned-points {
 			min-width: 65px;
+		}
+
+		.detail-overlay {
+			padding: 12px;
+		}
+
+		.detail-header,
+		.detail-list {
+			padding-left: 17px;
+			padding-right: 17px;
 		}
 	}
 `;
