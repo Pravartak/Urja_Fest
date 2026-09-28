@@ -2,7 +2,14 @@
 
 import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
-import { Environment, OrbitControls, RoundedBox, Text } from "@react-three/drei";
+import {
+	Environment,
+	OrbitControls,
+	RoundedBox,
+	Text,
+} from "@react-three/drei";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 // import Navbar from "../components/Navbar";
@@ -25,7 +32,9 @@ import {
 
 const LcdBoard = dynamic(() => import("@/app/components/CircuitBoard"), {
 	ssr: false,
-	loading: () => <div className="hackhive-registration-board lcd-board" aria-hidden="true" />,
+	loading: () => (
+		<div className="hackhive-registration-board lcd-board" aria-hidden="true" />
+	),
 });
 
 type RegistrationEvent = {
@@ -45,7 +54,8 @@ type College = {
 	Teams: number;
 };
 
-	const HACKHIVE_EVENT_NAME = "HackHive Hackathon";
+const HACKHIVE_EVENT_NAME = "HackHive Hackathon";
+const OTHER_COLLEGE_VALUE = "__other__";
 
 export default function Register() {
 	const [boardReady, setBoardReady] = useState(false);
@@ -66,6 +76,7 @@ export default function Register() {
 		selectedEvent: "",
 		selectedEventId: "",
 		collegeId: "",
+		customCollegeName: "",
 		isSoloPlayer: false,
 		teamMember2: "",
 		teamMember3: "",
@@ -81,13 +92,15 @@ export default function Register() {
 
 		const fetchRegistrationData = async () => {
 			try {
-				const [collegeSnapshot, day2Snapshot] =
-					await Promise.all([
-						getDocs(collection(db, "CollegeCreds")),
-						getDocs(collection(db, "Day2")),
-					]);
+				const [collegeSnapshot, day2Snapshot] = await Promise.all([
+					getDocs(collection(db, "CollegeCreds")),
+					getDocs(collection(db, "Day2")),
+				]);
 
-				const mapEvent = (eventData: unknown, fallbackId: string): RegistrationEvent => {
+				const mapEvent = (
+					eventData: unknown,
+					fallbackId: string,
+				): RegistrationEvent => {
 					const data = (eventData ?? {}) as Partial<RegistrationEvent> & {
 						Date?: unknown;
 						Date_and_Time?: unknown;
@@ -103,7 +116,9 @@ export default function Register() {
 					};
 				};
 
-				const mapEvents = (snapshot: typeof day2Snapshot): RegistrationEvent[] =>
+				const mapEvents = (
+					snapshot: typeof day2Snapshot,
+				): RegistrationEvent[] =>
 					snapshot.docs.map((eventDoc) => {
 						return mapEvent(eventDoc.data(), eventDoc.id);
 					});
@@ -123,9 +138,7 @@ export default function Register() {
 				setFormData((prev) => ({
 					...prev,
 					selectedDay: "Day 2",
-					selectedEvent: hackHiveEvents[0]
-						? String(hackHiveEvents[0].Id)
-						: "",
+					selectedEvent: hackHiveEvents[0] ? String(hackHiveEvents[0].Id) : "",
 					selectedEventId: hackHiveEvents[0]
 						? String(hackHiveEvents[0].Id)
 						: "",
@@ -239,11 +252,19 @@ export default function Register() {
 			return;
 		}
 
-		const selectedCollege = colleges.find(
-			(college) => college.id === formData.collegeId,
-		);
+		const isOtherCollege = formData.collegeId === OTHER_COLLEGE_VALUE;
+		const trimmedCustomCollegeName = formData.customCollegeName.trim();
 
-		if (!selectedCollege) {
+		const selectedCollege = isOtherCollege
+			? undefined
+			: colleges.find((college) => college.id === formData.collegeId);
+
+		if (isOtherCollege) {
+			if (!trimmedCustomCollegeName) {
+				setSubmitError("Please enter the name of your college.");
+				return;
+			}
+		} else if (!selectedCollege) {
 			setSubmitError("Please select the college you will represent.");
 			return;
 		}
@@ -261,13 +282,20 @@ export default function Register() {
 		setSubmitting(true);
 
 		try {
-			const requestRef = doc(
-				collection(db, "CollegeCreds", selectedCollege.id, "Requests"),
-			);
+			// Existing colleges keep their registrations nested under
+			// CollegeCreds/{collegeId}/Requests, same as before. "Other College"
+			// registrations have no real college to nest under, so they go in
+			// their own top-level collection with no collegeId/collegeName/
+			// collegeCode — they never touch a college's PR points or team count.
+			const requestRef = isOtherCollege
+				? doc(collection(db, "HackHiveOtherRegistrations"))
+				: doc(collection(db, "CollegeCreds", selectedCollege!.id, "Requests"));
 			const safeFileName = formData.paymentProof.name.replace(/\s+/g, "_");
 			const paymentProofRef = storageRef(
 				storage,
-				`payment-proofs/${selectedCollege.id}/${requestRef.id}-${safeFileName}`,
+				isOtherCollege
+					? `payment-proofs/other/${requestRef.id}/${safeFileName}`
+					: `payment-proofs/${selectedCollege!.id}/${requestRef.id}-${safeFileName}`,
 			);
 			console.log("Payment proof:", {
 				name: formData.paymentProof.name,
@@ -281,13 +309,17 @@ export default function Register() {
 			);
 			const paymentProofUrl = await getDownloadURL(uploadResult.ref);
 			const batch = writeBatch(db);
-			const { paymentProof, ...registrationData } = formData;
+			const { paymentProof, customCollegeName, ...registrationData } = formData;
 
 			batch.set(requestRef, {
 				id: requestRef.id,
-				collegeId: selectedCollege.id,
-				collegeName: selectedCollege.Name,
-				collegeCode: selectedCollege.ClCode,
+				...(isOtherCollege
+					? { customCollegeName: trimmedCustomCollegeName }
+					: {
+							collegeId: selectedCollege!.id,
+							collegeName: selectedCollege!.Name,
+							collegeCode: selectedCollege!.ClCode,
+						}),
 				fullName: registrationData.fullName,
 				contactNumber: registrationData.contactNumber,
 				emailId: registrationData.emailId,
@@ -327,6 +359,7 @@ export default function Register() {
 					selectedEvent: day2Events[0] ? String(day2Events[0].Id) : "",
 					selectedEventId: day2Events[0] ? String(day2Events[0].Id) : "",
 					collegeId: "",
+					customCollegeName: "",
 					isSoloPlayer: false,
 					teamMember2: "",
 					teamMember3: "",
@@ -364,9 +397,12 @@ export default function Register() {
 				</div>
 			)}
 			<PCBBackground className="page-wrap hackhive-page-background">
+				<Link className="hackhive-back-button" href="/hackhive" aria-label="Back to HackHive">
+					<ArrowLeft aria-hidden="true" size={16} strokeWidth={2.2} />
+					<span>Back</span>
+				</Link>
 				<section
-					className={`register-hero hackhive-registration-hero hackhive-registration-hero--compact${boardReady ? " is-ready" : ""}`}
-				>
+					className={`register-hero hackhive-registration-hero hackhive-registration-hero--compact${boardReady ? " is-ready" : ""}`}>
 					<LcdBoard
 						text={["Register", " Beyond Ordinary"]}
 						align="center"
@@ -397,8 +433,8 @@ export default function Register() {
 									Registration Successful!
 								</h3>
 								<p style={{ color: "var(--text-dim)" }}>
-									Welcome to HACKHIVE 2026! Your registration details have been sent
-									for approval.
+									Welcome to HACKHIVE 2026! Your registration details have been
+									sent for approval.
 								</p>
 							</div>
 						) : (
@@ -489,7 +525,7 @@ export default function Register() {
 										value={formData.collegeId}
 										onChange={handleChange}
 										required
-										disabled={loading || colleges.length === 0}
+										disabled={loading}
 										style={{
 											width: "100%",
 											borderRadius: "10px",
@@ -501,13 +537,7 @@ export default function Register() {
 											fontFamily: "inherit",
 										}}>
 										<option value="">
-											{loading
-												? "Loading colleges..."
-												: error
-													? "Colleges unavailable"
-													: colleges.length === 0
-														? "No colleges available"
-														: "Select your college"}
+											{loading ? "Loading colleges..." : "Select your college"}
 										</option>
 										{colleges.map((college) => (
 											<option key={college.id} value={college.id}>
@@ -515,8 +545,44 @@ export default function Register() {
 												{college.ClCode ? ` (${college.ClCode})` : ""}
 											</option>
 										))}
+										<option value={OTHER_COLLEGE_VALUE}>
+											Other College (not listed)
+										</option>
 									</select>
 								</div>
+
+								{formData.collegeId === OTHER_COLLEGE_VALUE && (
+									<div style={{ marginBottom: "24px" }}>
+										<label
+											style={{
+												display: "block",
+												marginBottom: "10px",
+												color: "var(--text-dim)",
+												fontSize: "0.8rem",
+												letterSpacing: "1.5px",
+											}}>
+											YOUR COLLEGE NAME
+										</label>
+										<input
+											type="text"
+											name="customCollegeName"
+											value={formData.customCollegeName}
+											onChange={handleChange}
+											required
+											placeholder="Enter your college's full name"
+											style={{
+												width: "100%",
+												borderRadius: "10px",
+												color: "var(--text)",
+												padding: "14px 16px",
+												border: "1px solid var(--border)",
+												background: "var(--input-bg)",
+												fontSize: "0.95rem",
+												fontFamily: "inherit",
+											}}
+										/>
+									</div>
+								)}
 
 								<div style={{ marginBottom: "24px" }}>
 									<label
@@ -791,7 +857,12 @@ export default function Register() {
 								<button
 									type="submit"
 									className="btn btn-gold hackhive-registration-submit"
-									disabled={submitting || loading || colleges.length === 0}
+									disabled={
+										submitting ||
+										loading ||
+										(colleges.length === 0 &&
+											formData.collegeId !== OTHER_COLLEGE_VALUE)
+									}
 									style={{ width: "100%", justifyContent: "center" }}>
 									{submitting ? "Submitting..." : "Register Now"}
 								</button>
@@ -805,7 +876,8 @@ export default function Register() {
 										fontSize: "0.82rem",
 										textAlign: "center",
 									}}>
-									By registering, you agree to participate in HackHive Hackathon 2026.
+									By registering, you agree to participate in HackHive Hackathon
+									2026.
 								</p>
 							</form>
 						)}
@@ -816,137 +888,367 @@ export default function Register() {
 	);
 }
 
- type Point = [number, number];
+type Point = [number, number];
 
 const traces: Point[][] = [
-  [[-4.1, 1.7], [-3.2, 1.7], [-2.7, 1.2], [-2.1, 1.2]],
-  [[-4.1, 0.9], [-3.4, 0.9], [-3.0, 0.5], [-2.2, 0.5]],
-  [[-4.1, -1.6], [-3.3, -1.6], [-2.8, -1.15], [-2.3, -1.15]],
-  [[4.1, 1.55], [3.25, 1.55], [2.75, 1.05], [2.25, 1.05]],
-  [[4.1, -0.6], [3.35, -0.6], [2.85, -0.15], [2.25, -0.15]],
-  [[-1.5, -1.85], [-1.5, -1.25], [-1.15, -0.9], [-0.55, -0.9]],
-  [[1.4, -1.85], [1.4, -1.25], [1.05, -0.9], [0.55, -0.9]],
+	[
+		[-4.1, 1.7],
+		[-3.2, 1.7],
+		[-2.7, 1.2],
+		[-2.1, 1.2],
+	],
+	[
+		[-4.1, 0.9],
+		[-3.4, 0.9],
+		[-3.0, 0.5],
+		[-2.2, 0.5],
+	],
+	[
+		[-4.1, -1.6],
+		[-3.3, -1.6],
+		[-2.8, -1.15],
+		[-2.3, -1.15],
+	],
+	[
+		[4.1, 1.55],
+		[3.25, 1.55],
+		[2.75, 1.05],
+		[2.25, 1.05],
+	],
+	[
+		[4.1, -0.6],
+		[3.35, -0.6],
+		[2.85, -0.15],
+		[2.25, -0.15],
+	],
+	[
+		[-1.5, -1.85],
+		[-1.5, -1.25],
+		[-1.15, -0.9],
+		[-0.55, -0.9],
+	],
+	[
+		[1.4, -1.85],
+		[1.4, -1.25],
+		[1.05, -0.9],
+		[0.55, -0.9],
+	],
 ];
 
 function Trace({ points }: { points: Point[] }) {
-  const curve = new THREE.CatmullRomCurve3(
-    points.map(([x, z]) => new THREE.Vector3(x, 0.095, z)),
-  );
-  return (
-    <group>
-      <mesh geometry={new THREE.TubeGeometry(curve, 24, 0.026, 6, false)}>
-        <meshStandardMaterial color="#66c7ff" emissive="#1688d4" emissiveIntensity={1.4} metalness={0.8} roughness={0.28} />
-      </mesh>
-      {points.slice(0, -1).map(([x, z], index) => (
-        <mesh key={index} position={[x, 0.115, z]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.065, 0.065, 0.025, 12]} />
-          <meshStandardMaterial color="#dff5ff" metalness={0.9} roughness={0.2} />
-        </mesh>
-      ))}
-    </group>
-  );
+	const curve = new THREE.CatmullRomCurve3(
+		points.map(([x, z]) => new THREE.Vector3(x, 0.095, z)),
+	);
+	return (
+		<group>
+			<mesh geometry={new THREE.TubeGeometry(curve, 24, 0.026, 6, false)}>
+				<meshStandardMaterial
+					color="#66c7ff"
+					emissive="#1688d4"
+					emissiveIntensity={1.4}
+					metalness={0.8}
+					roughness={0.28}
+				/>
+			</mesh>
+			{points.slice(0, -1).map(([x, z], index) => (
+				<mesh
+					key={index}
+					position={[x, 0.115, z]}
+					rotation={[Math.PI / 2, 0, 0]}>
+					<cylinderGeometry args={[0.065, 0.065, 0.025, 12]} />
+					<meshStandardMaterial
+						color="#dff5ff"
+						metalness={0.9}
+						roughness={0.2}
+					/>
+				</mesh>
+			))}
+		</group>
+	);
 }
 
-function Chip({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
-  return (
-    <group position={position} scale={scale}>
-      <RoundedBox args={[0.78, 0.12, 0.62]} radius={0.05} smoothness={3}>
-        <meshStandardMaterial color="#05080b" metalness={0.75} roughness={0.32} />
-      </RoundedBox>
-      <mesh position={[0, 0.072, 0]}>
-        <boxGeometry args={[0.4, 0.018, 0.3]} />
-        <meshStandardMaterial color="#121d25" emissive="#07538a" emissiveIntensity={0.7} />
-      </mesh>
-      {[-0.24, -0.08, 0.08, 0.24].flatMap((x) => [
-        <mesh key={`${x}-a`} position={[x, 0.015, 0.39]}><boxGeometry args={[0.055, 0.05, 0.24]} /><meshStandardMaterial color="#f7fbff" metalness={0.95} roughness={0.18} /></mesh>,
-        <mesh key={`${x}-b`} position={[x, 0.015, -0.39]}><boxGeometry args={[0.055, 0.05, 0.24]} /><meshStandardMaterial color="#f7fbff" metalness={0.95} roughness={0.18} /></mesh>,
-      ])}
-    </group>
-  );
+function Chip({
+	position,
+	scale = 1,
+}: {
+	position: [number, number, number];
+	scale?: number;
+}) {
+	return (
+		<group position={position} scale={scale}>
+			<RoundedBox args={[0.78, 0.12, 0.62]} radius={0.05} smoothness={3}>
+				<meshStandardMaterial
+					color="#05080b"
+					metalness={0.75}
+					roughness={0.32}
+				/>
+			</RoundedBox>
+			<mesh position={[0, 0.072, 0]}>
+				<boxGeometry args={[0.4, 0.018, 0.3]} />
+				<meshStandardMaterial
+					color="#121d25"
+					emissive="#07538a"
+					emissiveIntensity={0.7}
+				/>
+			</mesh>
+			{[-0.24, -0.08, 0.08, 0.24].flatMap((x) => [
+				<mesh key={`${x}-a`} position={[x, 0.015, 0.39]}>
+					<boxGeometry args={[0.055, 0.05, 0.24]} />
+					<meshStandardMaterial
+						color="#f7fbff"
+						metalness={0.95}
+						roughness={0.18}
+					/>
+				</mesh>,
+				<mesh key={`${x}-b`} position={[x, 0.015, -0.39]}>
+					<boxGeometry args={[0.055, 0.05, 0.24]} />
+					<meshStandardMaterial
+						color="#f7fbff"
+						metalness={0.95}
+						roughness={0.18}
+					/>
+				</mesh>,
+			])}
+		</group>
+	);
 }
 
-function Resistor({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
-  return (
-    <group position={position} rotation={[0, rotation, 0]}>
-      <mesh><boxGeometry args={[0.58, 0.08, 0.2]} /><meshStandardMaterial color="#f4f7f8" roughness={0.4} /></mesh>
-      <mesh position={[-0.13, 0.045, 0]}><boxGeometry args={[0.055, 0.018, 0.21]} /><meshStandardMaterial color="#1689d4" /></mesh>
-      <mesh position={[0.08, 0.045, 0]}><boxGeometry args={[0.055, 0.018, 0.21]} /><meshStandardMaterial color="#0b1a27" /></mesh>
-      <mesh position={[0.28, 0, 0]}><boxGeometry args={[0.18, 0.035, 0.08]} /><meshStandardMaterial color="#dceeff" metalness={0.85} /></mesh>
-      <mesh position={[-0.28, 0, 0]}><boxGeometry args={[0.18, 0.035, 0.08]} /><meshStandardMaterial color="#dceeff" metalness={0.85} /></mesh>
-    </group>
-  );
+function Resistor({
+	position,
+	rotation = 0,
+}: {
+	position: [number, number, number];
+	rotation?: number;
+}) {
+	return (
+		<group position={position} rotation={[0, rotation, 0]}>
+			<mesh>
+				<boxGeometry args={[0.58, 0.08, 0.2]} />
+				<meshStandardMaterial color="#f4f7f8" roughness={0.4} />
+			</mesh>
+			<mesh position={[-0.13, 0.045, 0]}>
+				<boxGeometry args={[0.055, 0.018, 0.21]} />
+				<meshStandardMaterial color="#1689d4" />
+			</mesh>
+			<mesh position={[0.08, 0.045, 0]}>
+				<boxGeometry args={[0.055, 0.018, 0.21]} />
+				<meshStandardMaterial color="#0b1a27" />
+			</mesh>
+			<mesh position={[0.28, 0, 0]}>
+				<boxGeometry args={[0.18, 0.035, 0.08]} />
+				<meshStandardMaterial color="#dceeff" metalness={0.85} />
+			</mesh>
+			<mesh position={[-0.28, 0, 0]}>
+				<boxGeometry args={[0.18, 0.035, 0.08]} />
+				<meshStandardMaterial color="#dceeff" metalness={0.85} />
+			</mesh>
+		</group>
+	);
 }
 
 function Display({ displayText }: { displayText: string }) {
-  return (
-    <group position={[0, 0.18, 0.15]}>
-      <RoundedBox args={[4.8, 0.14, 1.65]} radius={0.08} smoothness={3}>
-        <meshStandardMaterial color="#06090c" metalness={0.7} roughness={0.25} />
-      </RoundedBox>
-      <mesh position={[0, 0.085, 0]}>
-        <boxGeometry args={[4.35, 0.025, 1.22]} />
-        <meshStandardMaterial color="#071724" emissive="#063d68" emissiveIntensity={0.8} roughness={0.22} />
-      </mesh>
-      <Text position={[0, 0.12, 0.02]} rotation={[-Math.PI / 2, 0, 0]} font="/fonts/Geist_Bold.json" fontSize={0.65} maxWidth={4} color="#eaf8ff" anchorX="center" anchorY="middle" outlineWidth={0.012} outlineColor="#168bd2">
-        {displayText.toUpperCase()}
-      </Text>
-      <mesh position={[-2.12, 0.12, -0.48]} rotation={[Math.PI / 2, 0, 0]}><circleGeometry args={[0.055, 12]} /><meshStandardMaterial color="#66c7ff" emissive="#168bd4" emissiveIntensity={2} /></mesh>
-      <mesh position={[2.12, 0.12, -0.48]} rotation={[Math.PI / 2, 0, 0]}><circleGeometry args={[0.055, 12]} /><meshStandardMaterial color="#66c7ff" emissive="#168bd4" emissiveIntensity={2} /></mesh>
-    </group>
-  );
+	return (
+		<group position={[0, 0.18, 0.15]}>
+			<RoundedBox args={[4.8, 0.14, 1.65]} radius={0.08} smoothness={3}>
+				<meshStandardMaterial
+					color="#06090c"
+					metalness={0.7}
+					roughness={0.25}
+				/>
+			</RoundedBox>
+			<mesh position={[0, 0.085, 0]}>
+				<boxGeometry args={[4.35, 0.025, 1.22]} />
+				<meshStandardMaterial
+					color="#071724"
+					emissive="#063d68"
+					emissiveIntensity={0.8}
+					roughness={0.22}
+				/>
+			</mesh>
+			<Text
+				position={[0, 0.12, 0.02]}
+				rotation={[-Math.PI / 2, 0, 0]}
+				font="/fonts/Geist_Bold.json"
+				fontSize={0.65}
+				maxWidth={4}
+				color="#eaf8ff"
+				anchorX="center"
+				anchorY="middle"
+				outlineWidth={0.012}
+				outlineColor="#168bd2">
+				{displayText.toUpperCase()}
+			</Text>
+			<mesh position={[-2.12, 0.12, -0.48]} rotation={[Math.PI / 2, 0, 0]}>
+				<circleGeometry args={[0.055, 12]} />
+				<meshStandardMaterial
+					color="#66c7ff"
+					emissive="#168bd4"
+					emissiveIntensity={2}
+				/>
+			</mesh>
+			<mesh position={[2.12, 0.12, -0.48]} rotation={[Math.PI / 2, 0, 0]}>
+				<circleGeometry args={[0.055, 12]} />
+				<meshStandardMaterial
+					color="#66c7ff"
+					emissive="#168bd4"
+					emissiveIntensity={2}
+				/>
+			</mesh>
+		</group>
+	);
 }
 
 function PCBScene({ displayText }: { displayText: string }) {
-  return (
-    <group>
-      <RoundedBox args={[9.2, 0.08, 4.4]} radius={0.12} smoothness={4}>
-        <meshStandardMaterial color="#0a1016" roughness={0.64} metalness={0.32} />
-      </RoundedBox>
-      <mesh position={[0, 0.047, 0]}>
-        <boxGeometry args={[8.95, 0.018, 4.15]} />
-        <meshStandardMaterial color="#101b24" roughness={0.7} metalness={0.18} />
-      </mesh>
-      {traces.map((points, index) => <Trace key={index} points={points} />)}
-      <Display displayText={displayText} />
-      <Chip position={[-3.25, 0.14, 1.35]} scale={0.85} />
-      <Chip position={[3.25, 0.14, 0.95]} scale={0.78} />
-      <Chip position={[-2.95, 0.14, -1.45]} scale={0.72} />
-      <Chip position={[2.95, 0.14, -1.15]} scale={0.68} />
-      <Resistor position={[-1.85, 0.14, 1.82]} rotation={0.12} />
-      <Resistor position={[1.85, 0.14, 1.72]} rotation={-0.12} />
-      <Resistor position={[-0.95, 0.14, -1.55]} rotation={0.08} />
-      <Resistor position={[0.95, 0.14, -1.55]} rotation={-0.08} />
-      {[[ -4.25, 1.85], [4.25, 1.85], [-4.25, -1.85], [4.25, -1.85]].map(([x, z], index) => (
-        <mesh key={index} position={[x, 0.1, z]} rotation={[Math.PI / 2, 0, 0]}><ringGeometry args={[0.12, 0.17, 16]} /><meshStandardMaterial color="#dff5ff" metalness={0.95} roughness={0.18} /></mesh>
-      ))}
-    </group>
-  );
+	return (
+		<group>
+			<RoundedBox args={[9.2, 0.08, 4.4]} radius={0.12} smoothness={4}>
+				<meshStandardMaterial
+					color="#0a1016"
+					roughness={0.64}
+					metalness={0.32}
+				/>
+			</RoundedBox>
+			<mesh position={[0, 0.047, 0]}>
+				<boxGeometry args={[8.95, 0.018, 4.15]} />
+				<meshStandardMaterial
+					color="#101b24"
+					roughness={0.7}
+					metalness={0.18}
+				/>
+			</mesh>
+			{traces.map((points, index) => (
+				<Trace key={index} points={points} />
+			))}
+			<Display displayText={displayText} />
+			<Chip position={[-3.25, 0.14, 1.35]} scale={0.85} />
+			<Chip position={[3.25, 0.14, 0.95]} scale={0.78} />
+			<Chip position={[-2.95, 0.14, -1.45]} scale={0.72} />
+			<Chip position={[2.95, 0.14, -1.15]} scale={0.68} />
+			<Resistor position={[-1.85, 0.14, 1.82]} rotation={0.12} />
+			<Resistor position={[1.85, 0.14, 1.72]} rotation={-0.12} />
+			<Resistor position={[-0.95, 0.14, -1.55]} rotation={0.08} />
+			<Resistor position={[0.95, 0.14, -1.55]} rotation={-0.08} />
+			{[
+				[-4.25, 1.85],
+				[4.25, 1.85],
+				[-4.25, -1.85],
+				[4.25, -1.85],
+			].map(([x, z], index) => (
+				<mesh key={index} position={[x, 0.1, z]} rotation={[Math.PI / 2, 0, 0]}>
+					<ringGeometry args={[0.12, 0.17, 16]} />
+					<meshStandardMaterial
+						color="#dff5ff"
+						metalness={0.95}
+						roughness={0.18}
+					/>
+				</mesh>
+			))}
+		</group>
+	);
 }
 
 type CircuitBoardHeaderProps = {
-  displayText?: string;
+	displayText?: string;
 };
 
-function CircuitBoardHeader({ displayText = "REGISTER" }: CircuitBoardHeaderProps) {
-  return (
-    <div style={{ width: "100%", height: "250px", position: "relative", overflow: "hidden" }}>
-      <div aria-hidden="true" style={{ position: "absolute", inset: "20px auto auto 50%", transform: "translateX(-50%)", width: "min(88vw, 680px)", height: "210px", border: "2px solid #168bd2", borderRadius: "10px", background: "#0a1016", boxShadow: "0 0 28px rgba(22,139,210,.35), inset 0 0 0 8px #101b24", zIndex: 0 }}>
-        <div style={{ position: "absolute", inset: "22px 120px", display: "grid", placeItems: "center", border: "1px solid #168bd2", background: "#071724", color: "#eaf8ff", fontFamily: "monospace", fontWeight: 800, fontSize: "clamp(20px, 4vw, 38px)", letterSpacing: "0.12em", textShadow: "0 0 12px #168bd2" }}>{displayText.toUpperCase()}</div>
-        {["10%", "28%", "72%", "90%"].map((left) => <span key={left} style={{ position: "absolute", left, top: "10px", width: "8px", height: "8px", borderRadius: "50%", background: "#66c7ff", boxShadow: "0 0 10px #66c7ff" }} />)}
-        <div style={{ position: "absolute", left: "12px", right: "12px", top: "50%", height: "2px", background: "#168bd2", opacity: 0.8 }} />
-      </div>
-      <Canvas camera={{ position: [0, 0, 10], fov: 32, near: 0.1, far: 100 }} dpr={[1, 1.75]} gl={{ antialias: true, alpha: true }} onCreated={({ camera }) => camera.lookAt(0, 0, 0)}>
-        <ambientLight intensity={1.25} />
-        <directionalLight position={[-3, 5, 6]} intensity={2.2} color="#ffffff" />
-        <pointLight position={[0, 1, 4]} intensity={4} distance={10} color="#2b9fe8" />
-        <group rotation={[-Math.PI / 2, 0, 0]}>
-          <PCBScene displayText={displayText} />
-        </group>
-        <Environment preset="studio" />
-        <OrbitControls enableZoom={false} enablePan={false} enableRotate={false} />
-            </Canvas>
-    </div>
-  );
+function CircuitBoardHeader({
+	displayText = "REGISTER",
+}: CircuitBoardHeaderProps) {
+	return (
+		<div
+			style={{
+				width: "100%",
+				height: "250px",
+				position: "relative",
+				overflow: "hidden",
+			}}>
+			<div
+				aria-hidden="true"
+				style={{
+					position: "absolute",
+					inset: "20px auto auto 50%",
+					transform: "translateX(-50%)",
+					width: "min(88vw, 680px)",
+					height: "210px",
+					border: "2px solid #168bd2",
+					borderRadius: "10px",
+					background: "#0a1016",
+					boxShadow: "0 0 28px rgba(22,139,210,.35), inset 0 0 0 8px #101b24",
+					zIndex: 0,
+				}}>
+				<div
+					style={{
+						position: "absolute",
+						inset: "22px 120px",
+						display: "grid",
+						placeItems: "center",
+						border: "1px solid #168bd2",
+						background: "#071724",
+						color: "#eaf8ff",
+						fontFamily: "monospace",
+						fontWeight: 800,
+						fontSize: "clamp(20px, 4vw, 38px)",
+						letterSpacing: "0.12em",
+						textShadow: "0 0 12px #168bd2",
+					}}>
+					{displayText.toUpperCase()}
+				</div>
+				{["10%", "28%", "72%", "90%"].map((left) => (
+					<span
+						key={left}
+						style={{
+							position: "absolute",
+							left,
+							top: "10px",
+							width: "8px",
+							height: "8px",
+							borderRadius: "50%",
+							background: "#66c7ff",
+							boxShadow: "0 0 10px #66c7ff",
+						}}
+					/>
+				))}
+				<div
+					style={{
+						position: "absolute",
+						left: "12px",
+						right: "12px",
+						top: "50%",
+						height: "2px",
+						background: "#168bd2",
+						opacity: 0.8,
+					}}
+				/>
+			</div>
+			<Canvas
+				camera={{ position: [0, 0, 10], fov: 32, near: 0.1, far: 100 }}
+				dpr={[1, 1.75]}
+				gl={{ antialias: true, alpha: true }}
+				onCreated={({ camera }) => camera.lookAt(0, 0, 0)}>
+				<ambientLight intensity={1.25} />
+				<directionalLight
+					position={[-3, 5, 6]}
+					intensity={2.2}
+					color="#ffffff"
+				/>
+				<pointLight
+					position={[0, 1, 4]}
+					intensity={4}
+					distance={10}
+					color="#2b9fe8"
+				/>
+				<group rotation={[-Math.PI / 2, 0, 0]}>
+					<PCBScene displayText={displayText} />
+				</group>
+				<Environment preset="studio" />
+				<OrbitControls
+					enableZoom={false}
+					enablePan={false}
+					enableRotate={false}
+				/>
+			</Canvas>
+		</div>
+	);
 }
 
 export { CircuitBoardHeader };

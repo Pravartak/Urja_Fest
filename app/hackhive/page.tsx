@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import PCBBackground from "../components/PCBBackground";
 import LcdBoard from "../components/CircuitBoard";
@@ -16,6 +18,10 @@ export default function HackHive() {
 				</div>
 			)}
 			<PCBBackground className="page-wrap hackhive-page-background">
+				<Link className="hackhive-back-button" href="/" aria-label="Back to home">
+					<ArrowLeft aria-hidden="true" size={16} strokeWidth={2.2} />
+					<span>Back</span>
+				</Link>
 				<section
 					className={`register-hero hackhive-registration-hero${boardReady ? " is-ready" : ""}`}>
 					<div className="title-sponsor">

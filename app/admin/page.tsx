@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { SubmitEvent, useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { db, storage } from "@/lib/firebase";
@@ -34,6 +34,11 @@ type College = {
 
 type PendingRegistration = {
 	id: string;
+	// "college" = a real CollegeCreds doc, request lives at
+	// CollegeCreds/{collegeId}/Requests/{id}.
+	// "other" = registrant picked "Other College", request lives at
+	// the top-level HackHiveOtherRegistrations/{id}, collegeId is "".
+	source: "college" | "other";
 	collegeId: string;
 	collegeName: string;
 	collegeCode: string;
@@ -124,6 +129,7 @@ export default function Admin() {
 
 								return {
 									id: requestDoc.id,
+									source: "college" as const,
 
 									collegeId: data.collegeId ?? collegeDoc.id,
 									collegeName:
@@ -155,7 +161,56 @@ export default function Admin() {
 					}),
 				);
 
-				const pending = requestGroups.flat();
+				const collegeRequests = requestGroups.flat();
+
+				// "Other College" registrations aren't nested under any
+				// CollegeCreds doc — they live in their own top-level
+				// collection — so they need a separate fetch and get merged
+				// into the same pending list the admin reviews.
+				const otherSnapshot = await getDocs(
+					collection(db, "HackHiveOtherRegistrations"),
+				);
+				const otherRequests = otherSnapshot.docs
+					.filter((requestDoc) => {
+						const data = requestDoc.data();
+						return !data.status || data.status === "pending";
+					})
+					.map((requestDoc) => {
+						const data = requestDoc.data();
+						const normalizedPaymentProofName =
+							data.paymentProofName ??
+							data.paymentProofFileName ??
+							data.paymentProof?.name ??
+							null;
+
+						return {
+							id: requestDoc.id,
+							source: "other" as const,
+
+							collegeId: "",
+							collegeName: data.customCollegeName ?? "Other College",
+							collegeCode: "OTHER",
+
+							teamLeaderName: data.fullName ?? data.teamLeaderName ?? "Unknown",
+							contactNumber: data.contactNumber ?? "Not provided",
+
+							eventId: data.selectedEventId ?? data.eventId ?? "",
+							eventName:
+								data.selectedEvent ?? data.eventName ?? "Unknown Event",
+
+							selectedDay: data.selectedDay ?? "",
+
+							teamMember2: data.teamMember2 ?? "",
+							teamMember3: data.teamMember3 ?? "",
+							teamMember4: data.teamMember4 ?? "",
+							teamMember5: data.teamMember5 ?? "",
+							paymentProofFileName: normalizedPaymentProofName,
+							paymentProofPath: data.paymentProofPath ?? null,
+							paymentProofUrl: data.paymentProofUrl ?? null,
+						} satisfies PendingRegistration;
+					});
+
+				const pending = [...collegeRequests, ...otherRequests];
 
 				const registrationsWithProofs = await Promise.all(
 					pending.map(async (registration) => {
@@ -171,7 +226,9 @@ export default function Admin() {
 							const proofRef = ref(
 								storage,
 								registration.paymentProofPath ??
-									`payment-proofs/${registration.collegeId}/${registration.id}-${registration.paymentProofFileName}`,
+									(registration.source === "other"
+										? `payment-proofs/other/${registration.id}/${registration.paymentProofFileName}`
+										: `payment-proofs/${registration.collegeId}/${registration.id}-${registration.paymentProofFileName}`),
 							);
 							const paymentProofUrl = await getDownloadURL(proofRef);
 							return { ...registration, paymentProofUrl };
@@ -217,13 +274,16 @@ export default function Admin() {
 				updatedBy.placeholder = "Please enter your name...";
 				return;
 			}
-			const requestRef = doc(
-				db,
-				"CollegeCreds",
-				registration.collegeId,
-				"Requests",
-				registration.id,
-			);
+			const requestRef =
+				registration.source === "other"
+					? doc(db, "HackHiveOtherRegistrations", registration.id)
+					: doc(
+							db,
+							"CollegeCreds",
+							registration.collegeId,
+							"Requests",
+							registration.id,
+						);
 
 			// --------------------------------------------------
 			// REJECT
@@ -271,7 +331,7 @@ export default function Admin() {
 					) as HTMLInputElement;
 					updatedBy.placeholder =
 						"You are not authorized to accept or reject this registration.";
-						updatedBy.value = "";
+					updatedBy.value = "";
 					return;
 				}
 			}
@@ -293,7 +353,9 @@ export default function Admin() {
 				(registration.eventName === "HackHive Hackathon" &&
 					addedByTrimmed === "frogEaters")
 			) {
-				// 1. Create Team first
+				// 1. Create Team first (both a real college and "Other College"
+				// registrations become a Team doc, so reporting always has one
+				// place to see every accepted team for the event).
 				const teamRef = doc(collection(db, "Teams"));
 				const teamId = teamRef.id;
 
@@ -303,11 +365,32 @@ export default function Admin() {
 					member3: registration.teamMember3,
 					member4: registration.teamMember4,
 					member5: registration.teamMember5,
-					collegeId: registration.collegeId,
 					eventId: registration.eventId,
 					eventName: registration.eventName,
 					createdAt: new Date(),
+					...(registration.source === "other"
+						? {
+								collegeId: null,
+								collegeName: registration.collegeName,
+							}
+						: { collegeId: registration.collegeId }),
 				});
+
+				if (registration.source === "other") {
+					// "Other College" has no CollegeCreds doc — never touch
+					// PRPoints/Teams/Events on any college, and skip the
+					// points-transaction log since there's no college to credit.
+					await updateDoc(requestRef, {
+						status: "accepted",
+						reviewedAt: new Date(),
+						teamId: teamId,
+					});
+
+					setPendingRegistrations((current) =>
+						current.filter((item) => item.id !== registration.id),
+					);
+					return;
+				}
 
 				// 2. Now read existing Events
 				const collegeRef = doc(db, "CollegeCreds", registration.collegeId);
@@ -372,7 +455,8 @@ export default function Admin() {
 					reason: "Event registration points",
 					points: 50,
 					createdAt: new Date(),
-					updatedBy: addedByTrimmed === "frogEaters" ? "Administrator" : addedByTrimmed,
+					updatedBy:
+						addedByTrimmed === "frogEaters" ? "Administrator" : addedByTrimmed,
 				});
 
 				await batch.commit();
@@ -394,7 +478,7 @@ export default function Admin() {
 				) as HTMLInputElement;
 				updatedBy.placeholder =
 					"You are not authorized to accept or reject this registration.";
-					updatedBy.value = "";
+				updatedBy.value = "";
 				return;
 			}
 		} catch (decisionError) {
@@ -410,7 +494,7 @@ export default function Admin() {
 		}
 	};
 
-	const handleLogin = (event: FormEvent<HTMLFormElement>) => {
+	const handleLogin = (event: SubmitEvent<HTMLFormElement>) => {
 		event.preventDefault();
 
 		if (password === process.env.NEXT_PUBLIC_ADMIN_PASS) {
@@ -429,7 +513,7 @@ export default function Admin() {
 		setErrorMsg("");
 	};
 
-	const handlePointsChange = async (event: FormEvent<HTMLFormElement>) => {
+	const handlePointsChange = async (event: SubmitEvent<HTMLFormElement>) => {
 		event.preventDefault();
 
 		if (!selectedCollege) {
@@ -490,7 +574,7 @@ export default function Admin() {
 		}
 	};
 
-	const handleAddCollege = async (event: FormEvent<HTMLFormElement>) => {
+	const handleAddCollege = async (event: SubmitEvent<HTMLFormElement>) => {
 		event.preventDefault();
 		setCollegeStatus("");
 
@@ -1092,7 +1176,7 @@ export default function Admin() {
 
 										return (
 											<article
-												key={`${registration.collegeId}-${registration.id}`}
+												key={`${registration.source}-${registration.id}`}
 												style={{
 													overflow: "hidden",
 													borderRadius: "20px",
@@ -1157,6 +1241,23 @@ export default function Admin() {
 															<strong style={detailValueStyle}>
 																{registration.collegeName}
 															</strong>
+															{registration.source === "other" && (
+																<span
+																	style={{
+																		alignSelf: "flex-start",
+																		marginTop: "2px",
+																		padding: "2px 8px",
+																		borderRadius: "999px",
+																		background: "rgba(232,69,184,0.12)",
+																		border: "1px solid rgba(232,69,184,0.35)",
+																		color: "var(--pink)",
+																		fontSize: "0.65rem",
+																		fontWeight: 700,
+																		letterSpacing: "0.6px",
+																	}}>
+																	NOT ON LIST
+																</span>
+															)}
 														</div>
 
 														<div style={detailCardStyle}>
