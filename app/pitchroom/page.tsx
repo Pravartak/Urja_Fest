@@ -15,16 +15,17 @@ const cardStyle: React.CSSProperties = {
 };
 
 const sectionTitleStyle: React.CSSProperties = {
-	fontSize: "2.1rem",
-	fontWeight: 800,
+	fontSize: "2.2rem",
+	fontWeight: 900,
 	marginBottom: "18px",
-	letterSpacing: "1px",
+	letterSpacing: "0.5px",
 	textTransform: "uppercase",
-	backgroundImage: "linear-gradient(90deg, #5eead4 0%, #38bdf8 100%)",
+	backgroundImage: "linear-gradient(180deg, #5eead4 0%, #38bdf8 100%)",
 	WebkitBackgroundClip: "text",
 	backgroundClip: "text",
 	color: "transparent",
 	WebkitTextFillColor: "transparent",
+	textShadow: "0 4px 18px rgba(56, 189, 248, 0.25)",
 };
 
 const bodyTextStyle: React.CSSProperties = {
@@ -51,19 +52,44 @@ export default function PitchRoomLanding() {
 
 			<div className="page-wrap">
 				<section className="register-hero">
+					<img
+						src="/pitchroom-logo.png"
+						alt="The Pitch Room — Bakliwal Foundation College"
+						style={{
+							width: "min(70vw, 260px)",
+							height: "auto",
+							display: "block",
+							margin: "0 auto 20px",
+						}}
+					/>
 					<h1
 						className="hero-title"
 						data-text="The Pitch Room"
 						style={{
+							fontWeight: 900,
+							letterSpacing: "0.5px",
 							backgroundImage:
-								"linear-gradient(90deg, #5eead4 0%, #38bdf8 100%)",
+								"linear-gradient(180deg, #5eead4 0%, #38bdf8 100%)",
 							WebkitBackgroundClip: "text",
 							backgroundClip: "text",
 							color: "transparent",
 							WebkitTextFillColor: "transparent",
+							textShadow: "0 6px 24px rgba(56, 189, 248, 0.3)",
 						}}>
 						The Pitch Room
 					</h1>
+					<p
+						style={{
+							color: "#7ec9c2",
+							marginTop: "2px",
+							marginBottom: "16px",
+							fontSize: "1.1rem",
+							fontWeight: 700,
+							letterSpacing: "3px",
+							textTransform: "uppercase",
+						}}>
+						2026-2027
+					</p>
 					<p
 						className="hero-tagline"
 						style={{
