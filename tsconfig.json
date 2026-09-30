@@ -8,6 +8,7 @@
     ],
     "jsx": "react-jsx",
     "module": "esnext",
+    "types": ["@react-three/fiber"],
     "moduleResolution": "bundler",
     "allowJs": true,
     "strict": false,
