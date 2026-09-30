@@ -17,7 +17,6 @@ import {
 	ref as storageRef,
 	uploadBytes,
 } from "firebase/storage";
-// import LcdBoard from "@/app/components/CircuitBoard";
 
 type Event = {
 	Id: number | string;
@@ -206,20 +205,20 @@ export default function Register() {
 						: {}),
 		}));
 
-		// Show teamMember5 input only if selected event is "The Pitch Room"
-		if (name === "selectedEvent") {
-			const event = getEventsForDay(formData.selectedDay).find(
-				(e) => String(e.Id) === value,
-			);
-			if (event?.Name === "The Pitch Room") {
-				setShowTeamMember5(true);
-			} else {
-				setShowTeamMember5(false);
-			}
-		} else if (name === "selectedDay") {
-			// Reset teamMember5 visibility when day changes
-			setShowTeamMember5(false);
-		}
+		// // Show teamMember5 input only if selected event is "The Pitch Room"
+		// if (name === "selectedEvent") {
+		// 	const event = getEventsForDay(formData.selectedDay).find(
+		// 		(e) => String(e.Id) === value,
+		// 	);
+		// 	if (event?.Name === "HackHive Hackathon") {
+		// 		setShowTeamMember5(true);
+		// 	} else {
+		// 		setShowTeamMember5(false);
+		// 	}
+		// } else if (name === "selectedDay") {
+		// 	// Reset teamMember5 visibility when day changes
+		// 	setShowTeamMember5(false);
+		// }
 	};
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -701,7 +700,7 @@ export default function Register() {
 											}}
 										/>
 									</div>
-									{showTeamMember5 && (
+									{/* {showTeamMember5 && (
 										<div style={{ marginBottom: "24px" }}>
 											<label
 												style={{
@@ -732,7 +731,7 @@ export default function Register() {
 												}}
 											/>
 										</div>
-									)}
+									)} */}
 								</>
 
 								{formData.selectedEvent && (

@@ -168,6 +168,12 @@ export default function HackHive() {
 								Follow Computer Association on Instagram
 							</a>
 						</div>
+						<div className="hackhive-footer-admin">
+							<span className="hackhive-footer-label">Admin Contact</span>
+							<span>Pratik Shinde: +91 8010418829</span>
+							<span>Amandeep Chattai: +91 9082013733</span>
+							<span>Pravartak Ambhore: +91 9136672230</span>
+						</div>
 						<div className="other-sponsors">
 							<span className="sponsor-chip">
 								<img src="/Cosmic Grid Logo.png" alt="Sponsor 1" />

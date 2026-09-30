@@ -1200,8 +1200,8 @@ img {
   align-items: center;
   justify-content: center;
 
-  width: min(260px, 65vw);
-  height: 66px;
+  width: min(200px, 55vw);
+  height: 50px;
 
   padding: 4px 4px;
 
@@ -2515,7 +2515,8 @@ img {
 
 .hackhive-footer-brand,
 .hackhive-footer-meta,
-.hackhive-footer-socials {
+.hackhive-footer-socials,
+.hackhive-footer-admin {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -2531,7 +2532,8 @@ img {
 
 .hackhive-footer-brand p,
 .hackhive-footer-meta span:not(.hackhive-footer-label),
-.hackhive-footer-socials a {
+.hackhive-footer-socials a,
+.hackhive-footer-admin span:not(.hackhive-footer-label) {
   color: rgba(245, 250, 255, 0.74);
   font-size: 0.82rem;
   line-height: 1.5;
@@ -2578,6 +2580,22 @@ img {
 .hackhive-footer-copyright span:first-child,
 .hackhive-footer-copyright span:last-child {
   color: #38bdf8;
+}
+
+@media (min-width: 701px) {
+  .hackhive-footer-admin {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(120px, 0.7fr) repeat(3, minmax(0, 1fr));
+    align-items: center;
+    gap: 12px 20px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(56, 189, 248, 0.24);
+  }
+
+  .hackhive-footer-admin .hackhive-footer-label {
+    margin-right: 8px;
+  }
 }
 
 @media (max-width: 700px) {

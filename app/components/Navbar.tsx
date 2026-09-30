@@ -53,7 +53,7 @@ export default function Navbar() {
 				<Link href="/sponsors" className={isActive("/sponsors")}>
 					SPONSORS
 				</Link>
-				<Link href="#" className={`pitchroom ${isActive("/pitchroom")}`}>
+				<Link href="/pitchroom" className={`pitchroom ${isActive("/pitchroom")}`}>
 					THE PITCH ROOM
 				</Link>
 				<Link
