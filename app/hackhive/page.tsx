@@ -173,9 +173,6 @@ export default function HackHive() {
 								<img src="/Cosmic Grid Logo.png" alt="Sponsor 1" />
 							</span>
 							<span className="sponsor-chip">
-								<img src="/galaxy-bg.png" alt="Sponsor 2" />
-							</span>
-							<span className="sponsor-chip">
 								<img src="/Wheels Navi Mumbai.png" alt="Sponsor 3" />
 							</span>
 						</div>
