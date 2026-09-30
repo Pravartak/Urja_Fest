@@ -548,7 +548,7 @@ img {
 
 /* -----------------------------------------------
 				   Vertical current
-				------------------------------------------------ */
+------------------------------------------------ */
 
 @keyframes pcb-current-vertical {
   0% {
@@ -576,7 +576,7 @@ img {
 
 /* -----------------------------------------------
 				   Connection / solder pads
-				------------------------------------------------ */
+------------------------------------------------ */
 
 .trace-node {
   position: absolute;
@@ -667,7 +667,7 @@ img {
 
 /* -----------------------------------------------
 				   Accessibility / performance
-				------------------------------------------------ */
+------------------------------------------------ */
 
 @media (prefers-reduced-motion: reduce) {
 
@@ -1158,7 +1158,7 @@ img {
   position: relative;
   z-index: 2;
 
-  display: none; /* Revert this to flex after getting the logo */
+  display: flex;
   flex-direction: column;
   align-items: center;
 

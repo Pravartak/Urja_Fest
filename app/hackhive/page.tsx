@@ -40,7 +40,7 @@ export default function HackHive() {
 					<div className="title-sponsor">
 						<strong className="title-sponsor-label">Powered By</strong>
 						<span>
-							<img src="/galaxy-bg.png" alt="Title Sponsor" />
+							<img src="/Warana.png" alt="Title Sponsor" />
 						</span>
 					</div>
 				</section>
