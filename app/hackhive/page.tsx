@@ -38,7 +38,7 @@ export default function HackHive() {
 						onReady={() => setBoardReady(true)}
 					/>
 					<div className="title-sponsor">
-						<strong className="title-sponsor-label">Powered By</strong>
+						<strong className="title-sponsor-label">Title Sponsor</strong>
 						<span>
 							<img src="/Warana.png" alt="Title Sponsor" />
 						</span>
@@ -170,9 +170,18 @@ export default function HackHive() {
 						</div>
 						<div className="hackhive-footer-admin">
 							<span className="hackhive-footer-label">Admin Contact</span>
-							<span>Pratik Shinde: +91 8010418829</span>
-							<span>Amandeep Chattai: +91 9082013733</span>
-							<span>Pravartak Ambhore: +91 9136672230</span>
+							<span>
+								Pratik Shinde:{" "}
+								<a href="tel:+918010418829">+91 8010418829</a>
+							</span>
+							<span>
+								Amandeep Chattai:{" "}
+								<a href="tel:+919082013733">+91 9082013733</a>
+							</span>
+							<span>
+								Pravartak Ambhore:{" "}
+								<a href="tel:+919136672230">+91 9136672230</a>
+							</span>
 						</div>
 						<div className="other-sponsors">
 							<span className="sponsor-chip">

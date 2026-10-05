@@ -461,6 +461,7 @@ export default function Register() {
 									<input
 										type="text"
 										name="fullName"
+										autoComplete="name"
 										value={formData.fullName}
 										onChange={handleChange}
 										required
@@ -492,6 +493,8 @@ export default function Register() {
 									<input
 										type="email"
 										name="emailId"
+										autoComplete="email"
+										inputMode="email"
 										value={formData.emailId}
 										onChange={handleChange}
 										required
@@ -566,6 +569,7 @@ export default function Register() {
 										<input
 											type="text"
 											name="customCollegeName"
+											autoComplete="organization"
 											value={formData.customCollegeName}
 											onChange={handleChange}
 											required
@@ -598,6 +602,8 @@ export default function Register() {
 									<input
 										type="tel"
 										name="contactNumber"
+										autoComplete="tel"
+										inputMode="tel"
 										value={formData.contactNumber}
 										onChange={handleChange}
 										required
@@ -678,6 +684,7 @@ export default function Register() {
 										<input
 											type="text"
 											name="teamMember2"
+											autoComplete="off"
 											value={formData.teamMember2}
 											onChange={handleChange}
 											disabled={formData.isSoloPlayer}
@@ -708,6 +715,7 @@ export default function Register() {
 										<input
 											type="text"
 											name="teamMember3"
+											autoComplete="off"
 											value={formData.teamMember3}
 											onChange={handleChange}
 											disabled={formData.isSoloPlayer}
@@ -738,6 +746,7 @@ export default function Register() {
 										<input
 											type="text"
 											name="teamMember4"
+											autoComplete="off"
 											value={formData.teamMember4}
 											onChange={handleChange}
 											disabled={formData.isSoloPlayer}
@@ -769,6 +778,7 @@ export default function Register() {
 											<input
 												type="text"
 												name="teamMember5"
+												autoComplete="off"
 												value={formData.teamMember5}
 												onChange={handleChange}
 												disabled={formData.isSoloPlayer}

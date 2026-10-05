@@ -3264,3 +3264,266 @@ img {
   margin: 14px auto 0;
   text-align: left;
 }
+
+/* =========================================================
+   HACKHIVE - MOBILE / RESPONSIVE PASS
+   Covers the HackHive landing page and the registration page.
+   Keep this block LAST in the file so it wins over earlier rules.
+========================================================= */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Safety net: nothing decorative should ever create sideways scroll. */
+.hackhive-page-background {
+  overflow-x: clip;
+}
+
+/* Touch screens have no real hover, so don't leave elements lifted after a tap. */
+@media (hover: none) {
+  .hackhive-register-cta:hover,
+  .hackhive-event-card:hover,
+  .hackhive-registration-submit:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Tablet portrait: 5 event cards in 2 columns leaves one orphan, so span it. */
+@media (min-width: 521px) and (max-width: 820px) {
+  .hackhive-event-card:last-child {
+    grid-column: 1 / -1;
+    min-height: 0;
+  }
+}
+
+/* ---------------------------------------------------------
+   Phones and small tablets
+--------------------------------------------------------- */
+@media (max-width: 700px) {
+
+  /* Back button: 44px touch target, clear of notches */
+  .hackhive-back-button {
+    top: max(16px, env(safe-area-inset-top));
+    left: max(16px, env(safe-area-inset-left));
+    min-height: 44px;
+  }
+
+  /* Hero: let the content set the height. The old fixed svh height could
+     push the sponsor badge down over the register button on short screens. */
+  .hackhive-registration-hero {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    padding: calc(76px + env(safe-area-inset-top)) 16px 28px;
+  }
+
+  .hackhive-registration-hero--compact {
+    height: auto;
+    min-height: 220px;
+    max-height: none;
+    padding: calc(76px + env(safe-area-inset-top)) 16px 16px;
+  }
+
+  .hackhive-registration-hero>.lcd-board {
+    width: min(500px, 92vw) !important;
+    margin: 4px 0 14px;
+  }
+
+  .cab-sponsor-logo {
+    width: min(180px, 52vw);
+    margin-bottom: 12px;
+  }
+
+  .cab-sponsor-logo img {
+    max-height: 76px;
+  }
+
+  .title-sponsor {
+    margin-bottom: 16px;
+  }
+
+  /* Register button: full width, easy to hit with a thumb */
+  .hackhive-register-cta-wrap {
+    padding: 16px 20px 8px;
+  }
+
+  .hackhive-register-cta-wrap-after {
+    padding: 8px 20px calc(56px + env(safe-area-inset-bottom));
+  }
+
+  .hackhive-register-cta {
+    width: 100%;
+    max-width: 360px;
+    min-width: 0;
+    min-height: 52px;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+  }
+
+  /* Long venue name should wrap, never overflow its card */
+  .hackhive-event-card h3 {
+    overflow-wrap: break-word;
+  }
+
+  /* Footer */
+  .hackhive-footer {
+    padding-bottom: calc(26px + env(safe-area-inset-bottom));
+  }
+
+  .hackhive-footer-brand p,
+  .hackhive-footer-meta span:not(.hackhive-footer-label),
+  .hackhive-footer-socials a,
+  .hackhive-footer-admin span:not(.hackhive-footer-label) {
+    font-size: 0.875rem;
+  }
+
+  .hackhive-footer-socials a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .hackhive-footer-admin a {
+    display: inline-block;
+    padding: 6px 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .other-sponsors {
+    padding-top: 34px;
+  }
+
+  /* -------- Registration form -------- */
+
+  /* 16px stops iOS Safari zooming the page when a field is focused */
+  .hackhive-registration-form input:not([type="checkbox"]):not([type="file"]),
+  .hackhive-registration-form select {
+    font-size: 16px !important;
+    touch-action: manipulation;
+  }
+
+  .hackhive-registration-form select {
+    text-overflow: ellipsis;
+  }
+
+  .hackhive-registration-form label {
+    line-height: 1.5;
+  }
+
+  .hackhive-registration-form input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+  }
+
+  .hackhive-registration-form label:has(input[type="checkbox"]) {
+    min-height: 48px;
+  }
+
+  /* Team fields are greyed out when "Solo player" is ticked */
+  .hackhive-registration-form input:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* File picker: smaller text, proper button */
+  .hackhive-registration-form input[type="file"] {
+    padding: 10px 12px !important;
+    font-size: 0.85rem !important;
+  }
+
+  .hackhive-registration-form input[type="file"]::file-selector-button {
+    margin-right: 12px;
+    padding: 8px 12px;
+    border: 1px solid #67e8f9;
+    border-radius: 4px;
+    color: #f5faff;
+    background: rgba(103, 232, 249, 0.14);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  /* Bigger QR code, easier to scan from another device */
+  .hackhive-registration-form img[alt="Payment QR Code"] {
+    width: min(240px, 72vw);
+    max-width: none !important;
+  }
+
+  .hackhive-registration-submit {
+    min-height: 56px;
+    touch-action: manipulation;
+  }
+
+  .hackhive-registration-error {
+    font-size: 0.9rem;
+  }
+}
+
+/* ---------------------------------------------------------
+   Narrow phones (iPhone SE, small Androids)
+--------------------------------------------------------- */
+@media (max-width: 520px) {
+
+  /* Match the e-waste panel to the event cards above it */
+  .hackhive-ewaste-section {
+    width: min(100% - 28px, 420px);
+    margin-bottom: 72px;
+    padding: 24px 20px 28px;
+  }
+
+  .hackhive-ewaste-section .hackhive-section-kicker {
+    display: block;
+  }
+
+  .hackhive-ewaste-section p {
+    font-size: 0.94rem;
+    line-height: 1.8;
+  }
+
+  /* Let the heading use the full card width */
+  .hackhive-event-info h2 {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .hackhive-registration-form,
+  .hackhive-registration-success {
+    padding: 22px 14px !important;
+  }
+
+  .hackhive-register-cta {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* ---------------------------------------------------------
+   Reduced motion: the earlier rule lost to the more specific
+   ".is-ready" selectors, and the CAB logo was missing from it.
+--------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .hackhive-registration-hero .cab-sponsor-logo,
+  .hackhive-registration-hero .title-sponsor,
+  .hackhive-registration-hero>.lcd-board,
+  .hackhive-registration-hero.is-ready .cab-sponsor-logo,
+  .hackhive-registration-hero.is-ready .title-sponsor,
+  .hackhive-registration-hero.is-ready>.lcd-board {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .hackhive-register-cta,
+  .hackhive-event-card,
+  .hackhive-registration-submit {
+    transition: none;
+  }
+}
