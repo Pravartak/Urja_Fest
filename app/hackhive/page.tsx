@@ -86,8 +86,7 @@ export default function HackHive() {
 							<span className="hackhive-event-card-index">03 / FORMAT</span>
 							<h3>Play solo or upto 5 members</h3>
 							<p>
-								Bring your strongest idea, form a team, and turn a bold concept
-								into a working prototype.
+								Play solo or form a team to build a strong and working prototype.
 							</p>
 						</article>
 						<article className="hackhive-event-card">
@@ -175,7 +174,7 @@ export default function HackHive() {
 								<a href="tel:+918010418829">+91 8010418829</a>
 							</span>
 							<span>
-								Amandeep Chattai:{" "}
+								Amandeep Chhatai:{" "}
 								<a href="tel:+919082013733">+91 9082013733</a>
 							</span>
 							<span>
