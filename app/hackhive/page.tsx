@@ -149,7 +149,7 @@ export default function HackHive() {
 							</div>
 							<div>
 								<span className="hackhive-footer-label">Organized by</span>
-								<span>Computer Association of Bakliwal</span>
+								<span>Computer Association of Bakliwal Foundation College, Vashi</span>
 							</div>
 						</div>
 						<div className="hackhive-footer-socials">
