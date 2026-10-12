@@ -55,6 +55,7 @@ type College = {
 };
 
 const HACKHIVE_EVENT_NAME = "HackHive Hackathon";
+const HACKHIVE_FEE_PER_MEMBER = 100;
 const OTHER_COLLEGE_VALUE = "__other__";
 
 export default function Register() {
@@ -86,6 +87,16 @@ export default function Register() {
 	});
 
 	const [submitted, setSubmitted] = useState(false);
+
+	const teamMemberCount = formData.isSoloPlayer
+		? 1
+		: 1 +
+			[
+				formData.teamMember2,
+				formData.teamMember3,
+				formData.teamMember4,
+				formData.teamMember5,
+			].filter((member) => member.trim().length > 0).length;
 
 	useEffect(() => {
 		let active = true;
@@ -183,7 +194,8 @@ export default function Register() {
 
 		// Return different QR code based on selected event
 		if (selectedEvent?.Name === "HackHive Hackathon") {
-			return "/Hackathon_QR.jpeg"; // HackHive QR code
+			const amount = teamMemberCount * HACKHIVE_FEE_PER_MEMBER;
+			return `/HackHive_QR_${amount}.jpeg`;
 		}
 
 		return "/Other_QR.jpeg"; // Default QR code for other events
@@ -808,11 +820,14 @@ export default function Register() {
 												fontSize: "0.8rem",
 												letterSpacing: "1.5px",
 											}}>
-											PAYMENT QR CODE
+											PAYMENT QR CODE — ₹
+											{teamMemberCount * HACKHIVE_FEE_PER_MEMBER} (
+											{teamMemberCount}{" "}
+											{teamMemberCount === 1 ? "member" : "members"})
 										</label>
 										<img
 											src={getQRCodeImage()}
-											alt="Payment QR Code"
+											alt={`Payment QR Code for ₹${teamMemberCount * HACKHIVE_FEE_PER_MEMBER}`}
 											style={{
 												maxWidth: "200px",
 												height: "auto",
