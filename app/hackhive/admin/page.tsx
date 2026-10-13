@@ -15,6 +15,7 @@ const ACCEPTED_STATUS = "accepted";
 type AcceptedTeam = {
 	id: string;
 	leaderName: string;
+	contactNumber: string | null;
 	collegeName: string;
 	collegeCode: string | null; // null when the team chose "Other College"
 	members: string[];
@@ -26,6 +27,7 @@ const clean = (value: unknown): string =>
 const toTeam = (id: string, data: Record<string, unknown>): AcceptedTeam => ({
 	id,
 	leaderName: clean(data.fullName) || "Unnamed leader",
+	contactNumber: clean(data.contactNumber) || null,
 	collegeName:
 		clean(data.collegeName) ||
 		clean(data.customCollegeName) ||
@@ -86,6 +88,7 @@ export default function HackHiveAdmin() {
 			sheet.columns = [
 				{ header: "S.No", key: "sno", width: 8 },
 				{ header: "Team Leader", key: "leader", width: 28 },
+				{ header: "Phone Number", key: "phone", width: 16 },
 				{ header: "College", key: "college", width: 40 },
 				{ header: "CC Code", key: "code", width: 14 },
 				{ header: "Team Size", key: "size", width: 12 },
@@ -100,6 +103,7 @@ export default function HackHiveAdmin() {
 				const row: Record<string, string | number> = {
 					sno: index + 1,
 					leader: team.leaderName,
+					phone: team.contactNumber ?? "",
 					college: team.collegeName,
 					code: team.collegeCode ?? "",
 					size: team.members.length + 1,
@@ -322,6 +326,21 @@ export default function HackHiveAdmin() {
 													</span>
 													<span className="hackhive-admin-team-leader">
 														{team.leaderName}
+													</span>
+												</div>
+
+												<div className="hackhive-admin-team-field">
+													<span className="hackhive-admin-team-label">
+														Phone number
+													</span>
+													<span className="hackhive-admin-team-value">
+														{team.contactNumber ? (
+															<a href={`tel:${team.contactNumber}`}>
+																{team.contactNumber}
+															</a>
+														) : (
+															"Not provided"
+														)}
 													</span>
 												</div>
 
