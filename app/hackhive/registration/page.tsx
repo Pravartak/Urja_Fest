@@ -69,6 +69,7 @@ export default function Register() {
 	const [showTeamMember5, setShowTeamMember5] = useState(false);
 
 	const [formData, setFormData] = useState({
+		teamName: "",
 		fullName: "",
 		contactNumber: "",
 		emailId: "",
@@ -264,6 +265,11 @@ export default function Register() {
 			return;
 		}
 
+		if (!formData.teamName.trim()) {
+			setSubmitError("Please enter your team name.");
+			return;
+		}
+
 		const isOtherCollege = formData.collegeId === OTHER_COLLEGE_VALUE;
 		const trimmedCustomCollegeName = formData.customCollegeName.trim();
 
@@ -332,6 +338,7 @@ export default function Register() {
 							collegeName: selectedCollege!.Name,
 							collegeCode: selectedCollege!.ClCode,
 						}),
+				teamName: registrationData.teamName.trim(),
 				fullName: registrationData.fullName,
 				contactNumber: registrationData.contactNumber,
 				emailId: registrationData.emailId,
@@ -363,6 +370,7 @@ export default function Register() {
 
 			setTimeout(() => {
 				setFormData({
+					teamName: "",
 					fullName: "",
 					contactNumber: "",
 					emailId: "",
@@ -459,6 +467,39 @@ export default function Register() {
 									borderRadius: "18px",
 									padding: "40px",
 								}}>
+								<div style={{ marginBottom: "24px" }}>
+									<label
+										style={{
+											display: "block",
+											marginBottom: "10px",
+											color: "var(--text-dim)",
+											fontSize: "0.8rem",
+											letterSpacing: "1.5px",
+										}}>
+										TEAM NAME
+									</label>
+									<input
+										type="text"
+										name="teamName"
+										autoComplete="off"
+										value={formData.teamName}
+										onChange={handleChange}
+										required
+										maxLength={60}
+										placeholder="Your team's name"
+										style={{
+											width: "100%",
+											borderRadius: "10px",
+											color: "var(--text)",
+											padding: "14px 16px",
+											border: "1px solid var(--border)",
+											background: "var(--input-bg)",
+											fontSize: "0.95rem",
+											fontFamily: "inherit",
+										}}
+									/>
+								</div>
+
 								<div style={{ marginBottom: "24px" }}>
 									<label
 										style={{
