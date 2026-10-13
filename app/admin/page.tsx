@@ -49,6 +49,7 @@ type PendingRegistration = {
 	collegeId: string;
 	collegeName: string;
 	collegeCode: string;
+	teamName: string; // only HackHive collects it; "" for other events
 	teamLeaderName: string;
 	contactNumber: string;
 	eventId: string;
@@ -155,6 +156,7 @@ export default function Admin() {
 										collegeData.Name ??
 										"Unknown College",
 									collegeCode: data.collegeCode ?? collegeData.ClCode ?? "",
+									teamName: data.teamName ?? "",
 
 									teamLeaderName:
 										data.fullName ?? data.teamLeaderName ?? "Unknown",
@@ -207,6 +209,7 @@ export default function Admin() {
 							collegeId: "",
 							collegeName: data.customCollegeName ?? "Other College",
 							collegeCode: "OTHER",
+							teamName: data.teamName ?? "",
 
 							teamLeaderName: data.fullName ?? data.teamLeaderName ?? "Unknown",
 							contactNumber: data.contactNumber ?? "Not provided",
@@ -362,6 +365,7 @@ export default function Admin() {
 				const teamId = teamRef.id;
 
 				await setDoc(teamRef, {
+					teamName: registration.teamName,
 					teamLeader: registration.teamLeaderName,
 					member2: registration.teamMember2,
 					member3: registration.teamMember3,
@@ -1250,6 +1254,19 @@ export default function Admin() {
 															gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 															gap: "14px",
 														}}>
+														{registration.teamName && (
+															<div
+																style={{
+																	...detailCardStyle,
+																	gridColumn: "1 / -1",
+																}}>
+																<span style={detailLabelStyle}>TEAM NAME</span>
+																<strong style={detailValueStyle}>
+																	{registration.teamName}
+																</strong>
+															</div>
+														)}
+
 														<div style={detailCardStyle}>
 															<span style={detailLabelStyle}>COLLEGE</span>
 															<strong style={detailValueStyle}>

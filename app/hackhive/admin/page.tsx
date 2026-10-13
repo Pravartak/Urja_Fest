@@ -20,6 +20,7 @@ const ACCEPTED_STATUS = "accepted";
 
 type AcceptedTeam = {
 	id: string;
+	teamName: string | null; // null for registrations made before the field existed
 	leaderName: string;
 	contactNumber: string | null;
 	collegeName: string;
@@ -32,6 +33,7 @@ const clean = (value: unknown): string =>
 
 const toTeam = (id: string, data: Record<string, unknown>): AcceptedTeam => ({
 	id,
+	teamName: clean(data.teamName) || null,
 	leaderName: clean(data.fullName) || "Unnamed leader",
 	contactNumber: clean(data.contactNumber) || null,
 	collegeName:
@@ -108,6 +110,7 @@ export default function HackHiveAdmin() {
 
 			sheet.columns = [
 				{ header: "S.No", key: "sno", width: 8 },
+				{ header: "Team Name", key: "team", width: 28 },
 				{ header: "Team Leader", key: "leader", width: 28 },
 				{ header: "Phone Number", key: "phone", width: 16 },
 				{ header: "College", key: "college", width: 40 },
@@ -123,6 +126,7 @@ export default function HackHiveAdmin() {
 			teams.forEach((team, index) => {
 				const row: Record<string, string | number> = {
 					sno: index + 1,
+					team: team.teamName ?? "",
 					leader: team.leaderName,
 					phone: team.contactNumber ?? "",
 					college: team.collegeName,
@@ -347,9 +351,18 @@ export default function HackHiveAdmin() {
 											<li key={team.id} className="hackhive-admin-team-card">
 												<div className="hackhive-admin-team-field">
 													<span className="hackhive-admin-team-label">
-														Team leader
+														Team name
 													</span>
 													<span className="hackhive-admin-team-leader">
+														{team.teamName ?? "Not provided"}
+													</span>
+												</div>
+
+												<div className="hackhive-admin-team-field">
+													<span className="hackhive-admin-team-label">
+														Team leader
+													</span>
+													<span className="hackhive-admin-team-value">
 														{team.leaderName}
 													</span>
 												</div>

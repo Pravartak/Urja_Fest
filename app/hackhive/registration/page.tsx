@@ -260,13 +260,28 @@ export default function Register() {
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 
-		if (!formData.paymentProof) {
-			setSubmitError("Please upload your payment proof image.");
+		// `required` on the inputs lets whitespace-only values through, so every
+		// mandatory text field is checked again here (team members are optional).
+		const requiredFields: [string, string][] = [
+			[formData.teamName, "Please enter your team name."],
+			[formData.fullName, "Please enter your full name."],
+			[formData.emailId, "Please enter your email ID."],
+			[formData.contactNumber, "Please enter your contact number."],
+		];
+		const missingField = requiredFields.find(([value]) => !value.trim());
+		if (missingField) {
+			setSubmitError(missingField[1]);
 			return;
 		}
 
-		if (!formData.teamName.trim()) {
-			setSubmitError("Please enter your team name.");
+		const contactDigits = formData.contactNumber.replace(/\D/g, "");
+		if (contactDigits.length < 10 || contactDigits.length > 13) {
+			setSubmitError("Please enter a valid contact number.");
+			return;
+		}
+
+		if (!formData.paymentProof) {
+			setSubmitError("Please upload your payment proof image.");
 			return;
 		}
 
@@ -339,9 +354,9 @@ export default function Register() {
 							collegeCode: selectedCollege!.ClCode,
 						}),
 				teamName: registrationData.teamName.trim(),
-				fullName: registrationData.fullName,
-				contactNumber: registrationData.contactNumber,
-				emailId: registrationData.emailId,
+				fullName: registrationData.fullName.trim(),
+				contactNumber: registrationData.contactNumber.trim(),
+				emailId: registrationData.emailId.trim(),
 				selectedDay: registrationData.selectedDay,
 				...(registrationData.selectedDay === "Day 1"
 					? { selectedCategory: registrationData.selectedCategory }
