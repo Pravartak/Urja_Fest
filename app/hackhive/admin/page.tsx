@@ -7,6 +7,12 @@ import Link from "next/link";
 import { ArrowLeft, Download } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
+import {
+	AdminRole,
+	loginErrorMessage,
+	signInWithPassword,
+	watchAdminRole,
+} from "@/lib/adminAuth";
 
 const HACKHIVE_EVENT_NAME = "HackHive Hackathon";
 // Must match the value your approval flow writes to `status` on a request.
@@ -45,9 +51,14 @@ const toTeam = (id: string, data: Record<string, unknown>): AcceptedTeam => ({
 
 export default function HackHiveAdmin() {
 	const [boardReady, setBoardReady] = useState(false);
-	const [isLoggedIn, setIsLoggedIn] = useState(false);
+	const [role, setRole] = useState<AdminRole | null>(null);
+	const [isLoggingIn, setIsLoggingIn] = useState(false);
 	const [password, setPassword] = useState("");
 	const [errorMsg, setErrorMsg] = useState("");
+
+	const isLoggedIn = role === "hackhiveViewer";
+
+	useEffect(() => watchAdminRole(setRole), []);
 
 	const [teams, setTeams] = useState<AcceptedTeam[]>([]);
 	const [teamsLoading, setTeamsLoading] = useState(false);
@@ -55,16 +66,26 @@ export default function HackHiveAdmin() {
 	const [downloading, setDownloading] = useState(false);
 	const [downloadError, setDownloadError] = useState<string | null>(null);
 
-	const handleLogin = (event: SubmitEvent<HTMLFormElement>) => {
+	const handleLogin = async (event: SubmitEvent<HTMLFormElement>) => {
 		event.preventDefault();
+		setIsLoggingIn(true);
+		setErrorMsg("");
 
-		if (password === process.env.NEXT_PUBLIC_HACKHIVE_ADMIN_PASS) {
-			setIsLoggedIn(true);
-			setErrorMsg("");
-			return;
+		try {
+			const signedInAs = await signInWithPassword(password, ["hackhiveViewer"]);
+			if (signedInAs) {
+				setRole(signedInAs);
+				setPassword("");
+				return;
+			}
+			setErrorMsg("Invalid password");
+		} catch (loginError) {
+			console.error("HackHive admin login failed:", loginError);
+			setErrorMsg(loginErrorMessage(loginError));
+		} finally {
+			setIsLoggingIn(false);
 		}
 
-		setErrorMsg("Invalid password");
 		setPassword("");
 	};
 
@@ -146,10 +167,13 @@ export default function HackHiveAdmin() {
 			setTeamsError(null);
 
 			try {
+				// Both filters must stay in the query: firestore.rules only lets
+				// the HackHive login read HackHive requests.
 				const acceptedOnly = (path: string[]) =>
 					query(
 						collection(db, path[0], ...path.slice(1)),
 						where("status", "==", ACCEPTED_STATUS),
+						where("selectedEvent", "==", HACKHIVE_EVENT_NAME),
 					);
 
 				// Registered colleges keep requests under CollegeCreds/{id}/Requests;
@@ -236,8 +260,9 @@ export default function HackHiveAdmin() {
 
 								<button
 									type="submit"
-									className="hackhive-registration-submit hackhive-admin-login-submit">
-									Login
+									className="hackhive-registration-submit hackhive-admin-login-submit"
+									disabled={isLoggingIn || !password}>
+									{isLoggingIn ? "Checking..." : "Login"}
 								</button>
 							</form>
 						</div>

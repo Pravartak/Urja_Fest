@@ -15,6 +15,13 @@ import {
 	writeBatch,
 } from "firebase/firestore";
 import { getDownloadURL, ref } from "firebase/storage";
+import {
+	AdminRole,
+	loginErrorMessage,
+	signInWithPassword,
+	signOutAdmin,
+	watchAdminRole,
+} from "@/lib/adminAuth";
 
 type Event = {
 	Id: string;
@@ -61,7 +68,10 @@ export default function Admin() {
 	const [selectedCollegeId, setSelectedCollegeId] = useState("");
 	const [pointReason, setPointReason] = useState("");
 	const [updatedBy, setUpdatedBy] = useState(""); // For custom point updator
-	const [addedBy, setAddedBy] = useState(""); // For Registration acceptor
+	// Registration acceptor name and its validation hint, kept per registration
+	// (keyed by registrationKey) so each pending card has its own input.
+	const [addedBy, setAddedBy] = useState<Record<string, string>>({});
+	const [addedByHint, setAddedByHint] = useState<Record<string, string>>({});
 	const [pointAdjustment, setPointAdjustment] = useState<string>("");
 	const [pointStatus, setPointStatus] = useState("");
 	const [newCollege, setNewCollege] = useState({
@@ -82,9 +92,16 @@ export default function Admin() {
 		string | null
 	>(null);
 	const [isUpdating, setIsUpdating] = useState(false);
-	const [isLoggedIn, setIsLoggedIn] = useState(false);
+	const [role, setRole] = useState<AdminRole | null>(null);
+	const [isLoggingIn, setIsLoggingIn] = useState(false);
 	const [password, setPassword] = useState("");
 	const [errorMsg, setErrorMsg] = useState("");
+
+	// The HackHive viewer account only unlocks the HackHive admin page.
+	const isLoggedIn = role === "admin" || role === "hackhiveApprover";
+	const canApproveHackHive = role === "hackhiveApprover";
+
+	useEffect(() => watchAdminRole(setRole), []);
 
 	const selectedCollege = collegesList.find(
 		(college) => college.Id === selectedCollegeId,
@@ -262,16 +279,19 @@ export default function Admin() {
 		registration: PendingRegistration,
 		decision: "accepted" | "rejected",
 	) => {
+		const key = registrationKey(registration);
+		const showHint = (hint: string, clearValue = false) => {
+			setAddedByHint((current) => ({ ...current, [key]: hint }));
+			if (clearValue) setAddedBy((current) => ({ ...current, [key]: "" }));
+		};
+
 		setProcessingRegistrationId(registration.id);
 		setRegistrationError("");
 
 		try {
-			const addedByTrimmed = addedBy.trim();
+			const addedByTrimmed = (addedBy[key] ?? "").trim();
 			if (!addedByTrimmed) {
-				const updatedBy = document.getElementById(
-					"updatedBy",
-				) as HTMLInputElement;
-				updatedBy.placeholder = "Please enter your name...";
+				showHint("Please enter your name...");
 				return;
 			}
 			const requestRef =
@@ -288,14 +308,6 @@ export default function Admin() {
 			// --------------------------------------------------
 			// REJECT
 			// --------------------------------------------------
-
-			if (!addedByTrimmed) {
-				const updatedBy = document.getElementById(
-					"updatedBy",
-				) as HTMLInputElement;
-				updatedBy.placeholder = "Please enter your name...";
-				return;
-			}
 
 			if (
 				decision === "rejected" &&
@@ -315,7 +327,7 @@ export default function Admin() {
 				decision === "rejected" &&
 				registration.eventName === "HackHive Hackathon"
 			) {
-				if (addedByTrimmed === "frogEaters") {
+				if (canApproveHackHive) {
 					await updateDoc(requestRef, {
 						status: "rejected",
 						reviewedAt: new Date(),
@@ -326,12 +338,10 @@ export default function Admin() {
 					);
 					return;
 				} else {
-					const updatedBy = document.getElementById(
-						"updatedBy",
-					) as HTMLInputElement;
-					updatedBy.placeholder =
-						"You are not authorized to accept or reject this registration.";
-					updatedBy.value = "";
+					showHint(
+						"Only the HackHive approver login can accept or reject this registration.",
+						true,
+					);
 					return;
 				}
 			}
@@ -340,18 +350,10 @@ export default function Admin() {
 			// ACCEPT
 			// --------------------------------------------------
 
-			if (!addedByTrimmed) {
-				const updatedBy = document.getElementById(
-					"updatedBy",
-				) as HTMLInputElement;
-				updatedBy.placeholder = "Please enter your name...";
-				return;
-			}
-
 			if (
 				registration.eventName !== "HackHive Hackathon" ||
 				(registration.eventName === "HackHive Hackathon" &&
-					addedByTrimmed === "frogEaters")
+					canApproveHackHive)
 			) {
 				// 1. Create Team first (both a real college and "Other College"
 				// registrations become a Team doc, so reporting always has one
@@ -455,8 +457,7 @@ export default function Admin() {
 					reason: "Event registration points",
 					points: 50,
 					createdAt: new Date(),
-					updatedBy:
-						addedByTrimmed === "frogEaters" ? "Administrator" : addedByTrimmed,
+					updatedBy: addedByTrimmed,
 				});
 
 				await batch.commit();
@@ -471,14 +472,12 @@ export default function Admin() {
 				return;
 			} else if (
 				registration.eventName === "HackHive Hackathon" &&
-				addedByTrimmed !== "frogEaters"
+				!canApproveHackHive
 			) {
-				const updatedBy = document.getElementById(
-					"updatedBy",
-				) as HTMLInputElement;
-				updatedBy.placeholder =
-					"You are not authorized to accept or reject this registration.";
-				updatedBy.value = "";
+				showHint(
+					"Only the HackHive approver login can accept or reject this registration.",
+					true,
+				);
 				return;
 			}
 		} catch (decisionError) {
@@ -494,21 +493,34 @@ export default function Admin() {
 		}
 	};
 
-	const handleLogin = (event: SubmitEvent<HTMLFormElement>) => {
+	const handleLogin = async (event: SubmitEvent<HTMLFormElement>) => {
 		event.preventDefault();
+		setIsLoggingIn(true);
+		setErrorMsg("");
 
-		if (password === process.env.NEXT_PUBLIC_ADMIN_PASS) {
-			setIsLoggedIn(true);
-			setErrorMsg("");
-			return;
+		try {
+			const signedInAs = await signInWithPassword(password, [
+				"admin",
+				"hackhiveApprover",
+			]);
+			if (signedInAs) {
+				setRole(signedInAs);
+				setPassword("");
+				return;
+			}
+			setErrorMsg("Invalid password");
+		} catch (loginError) {
+			console.error("Admin login failed:", loginError);
+			setErrorMsg(loginErrorMessage(loginError));
+		} finally {
+			setIsLoggingIn(false);
 		}
 
-		setErrorMsg("Invalid password");
 		setPassword("");
 	};
 
-	const handleLogout = () => {
-		setIsLoggedIn(false);
+	const handleLogout = async () => {
+		await signOutAdmin();
 		setPassword("");
 		setErrorMsg("");
 	};
@@ -747,12 +759,13 @@ export default function Admin() {
 								<button
 									type="submit"
 									className="btn btn-purple-gradient"
+									disabled={isLoggingIn || !password}
 									style={{
 										width: "100%",
 										justifyContent: "center",
 										marginTop: "20px",
 									}}>
-									Login
+									{isLoggingIn ? "Checking..." : "Login"}
 								</button>
 							</form>
 						</div>
@@ -1173,6 +1186,7 @@ export default function Admin() {
 									{pendingRegistrations.map((registration) => {
 										const isProcessing =
 											processingRegistrationId === registration.id;
+										const key = registrationKey(registration);
 
 										return (
 											<article
@@ -1350,14 +1364,18 @@ export default function Admin() {
 													</div>
 
 													<input
-														id="updatedBy"
+														id={`updatedBy-${key}`}
 														type="text"
-														value={addedBy}
+														value={addedBy[key] ?? ""}
 														onChange={(event) => {
-															setAddedBy(event.target.value);
+															const value = event.target.value;
+															setAddedBy((current) => ({
+																...current,
+																[key]: value,
+															}));
 															setPointStatus("");
 														}}
-														placeholder="Updated by..."
+														placeholder={addedByHint[key] ?? "Updated by..."}
 														required
 														style={{
 															...inputStyle,
@@ -1425,6 +1443,9 @@ export default function Admin() {
 		</>
 	);
 }
+
+const registrationKey = (registration: PendingRegistration) =>
+	`${registration.source}-${registration.id}`;
 
 const inputStyle = {
 	width: "100%",
