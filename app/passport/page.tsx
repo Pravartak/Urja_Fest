@@ -9,6 +9,7 @@ import {
 	where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { signInCollege, signOutCollege } from "@/lib/collegeAuth";
 
 type Event = {
 	Id: string;
@@ -45,11 +46,6 @@ type RecentUpdate = {
 	updatedBy: string;
 };
 
-type CollegeCredential = {
-	ClCode: string;
-	Password: string;
-};
-
 export default function CollegeDashboard() {
 	const router = useRouter();
 	const params = useParams<{ clCode?: string }>();
@@ -58,7 +54,6 @@ export default function CollegeDashboard() {
 		? params.clCode[0]
 		: params?.clCode ?? "";
 
-	const [collegeCreds, setCollegeCreds] = useState<CollegeCredential[]>([]);
 	const [clCode, setClCode] = useState(routeClCode);
 	const [password, setPassword] = useState("");
 
@@ -68,63 +63,45 @@ export default function CollegeDashboard() {
 	const [recentUpdates, setRecentUpdates] = useState<RecentUpdate[]>([]);
 	const [activeDetail, setActiveDetail] = useState<"teams" | "events" | null>(null);
 
-	const [credentialsLoading, setCredentialsLoading] = useState(true);
+	const [isLoggingIn, setIsLoggingIn] = useState(false);
 	const [dashboardLoading, setDashboardLoading] = useState(false);
 	const [loginError, setLoginError] = useState("");
 	const [dashboardError, setDashboardError] = useState("");
 
 	/*
-	 * The passport page and dashboard use the same CollegeCreds collection.
-	 * Credentials are fetched once when the page opens.
+	 * Firebase Auth checks the CC code and password, so no passwords are
+	 * ever sent to the browser.
 	 */
-	useEffect(() => {
-		const fetchCredentials = async () => {
-			try {
-				const snapshot = await getDocs(collection(db, "CollegeCreds"));
-
-				setCollegeCreds(
-					snapshot.docs.map((collegeDoc) => {
-						const data = collegeDoc.data();
-
-						return {
-							ClCode: String(data.ClCode ?? ""),
-							Password: String(data.Password ?? ""),
-						};
-					})
-				);
-			} catch (error) {
-				console.error("Error fetching college credentials:", error);
-				setLoginError("Unable to connect. Please try again.");
-			} finally {
-				setCredentialsLoading(false);
-			}
-		};
-
-		fetchCredentials();
-	}, []);
-
-	const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+	const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setLoginError("");
+		setIsLoggingIn(true);
 
-		const enteredCode = clCode.trim();
+		try {
+			const signedIn = await signInCollege(clCode, password);
 
-		const credential = collegeCreds.find(
-			(cred) => cred.ClCode === enteredCode
-		);
+			if (!signedIn) {
+				setLoginError("Invalid CC Code or Password. Please check and try again.");
+				return;
+			}
 
-		if (!credential) {
-			setLoginError("Invalid Cl Code. Please check and try again.");
-			return;
+			setIsAuthenticated(true);
+			setPassword("");
+		} catch (error) {
+			console.error("College login failed:", error);
+			setLoginError(
+				(error as { code?: string }).code === "auth/too-many-requests"
+					? "Too many attempts. Please wait a few minutes and try again."
+					: "Unable to connect. Please try again."
+			);
+		} finally {
+			setIsLoggingIn(false);
 		}
+	};
 
-		if (credential.Password !== password) {
-			setLoginError("Invalid Password. Please check and try again.");
-			return;
-		}
-
-		setIsAuthenticated(true);
-		setPassword("");
+	const handleLogout = async () => {
+		await signOutCollege();
+		setIsAuthenticated(false);
 	};
 
 	useEffect(() => {
@@ -309,9 +286,9 @@ export default function CollegeDashboard() {
 							<button
 								type="submit"
 								className="submit-btn"
-								disabled={credentialsLoading}
+								disabled={isLoggingIn}
 							>
-								{credentialsLoading
+								{isLoggingIn
 									? "CONNECTING..."
 									: "SUBMIT"}
 							</button>
@@ -342,7 +319,7 @@ export default function CollegeDashboard() {
 			<div className="page-container">
 				<button
 					className="back-button"
-					onClick={() => setIsAuthenticated(false)}
+					onClick={handleLogout}
 				>
 					← Back
 				</button>
@@ -374,7 +351,7 @@ export default function CollegeDashboard() {
 		<div className="page-container dashboard-page">
 			<button
 				className="back-button"
-				onClick={() => setIsAuthenticated(false)}
+				onClick={handleLogout}
 			>
 				← Logout
 			</button>

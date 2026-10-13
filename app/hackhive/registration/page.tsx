@@ -50,7 +50,6 @@ type College = {
 	ClCode: string;
 	Name: string;
 	PRPoints: number;
-	Password: string;
 	Teams: number;
 };
 

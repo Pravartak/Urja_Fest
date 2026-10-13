@@ -22,6 +22,7 @@ import {
 	signOutAdmin,
 	watchAdminRole,
 } from "@/lib/adminAuth";
+import { createCollegeAccount } from "@/lib/collegeAuth";
 
 type Event = {
 	Id: string;
@@ -34,7 +35,6 @@ type College = {
 	ClCode: string;
 	Name: string;
 	PRPoints: number;
-	Password: string;
 	Teams: number;
 	Events: Event[];
 };
@@ -618,13 +618,26 @@ export default function Admin() {
 		setIsAddingCollege(true);
 
 		try {
+			// The password lives only in Firebase Auth, never in Firestore.
+			await createCollegeAccount(clCode, password);
+		} catch (accountError) {
+			console.error("Failed to create college login:", accountError);
+			setCollegeStatus(
+				(accountError as { code?: string }).code === "auth/email-already-in-use"
+					? `A college login for CC code ${clCode} already exists.`
+					: "Could not create the college login. Check your connection and try again.",
+			);
+			setIsAddingCollege(false);
+			return;
+		}
+
+		try {
 			const collegeRef = doc(collection(db, "CollegeCreds"));
 			await setDoc(collegeRef, {
 				Id: collegeRef.id,
 				ClCode: clCode,
 				Name: name,
 				PRPoints: prPoints,
-				Password: password,
 				Teams: teams,
 				Events: [],
 				createdAt: new Date(),
@@ -637,7 +650,6 @@ export default function Admin() {
 					ClCode: clCode,
 					Name: name,
 					PRPoints: prPoints,
-					Password: password,
 					Teams: teams,
 					Events: [],
 				},
