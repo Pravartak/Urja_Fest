@@ -3,7 +3,11 @@
  *
  *   npm install --no-save firebase-admin
  *   node scripts/create-college-accounts.mjs                    # create/sync accounts
- *   node scripts/create-college-accounts.mjs --strip-passwords  # then remove Password fields
+ *   node scripts/create-college-accounts.mjs --strip-passwords  # back up, then remove Password fields
+ *   node scripts/create-college-accounts.mjs --export           # only save the passwords to a CSV
+ *
+ * Backups are written as college-passwords-<time>.csv in the project root
+ * (gitignored). Move them somewhere safe, like a password manager.
  *
  * Needs a service-account key saved as firebase-service-account.json in the
  * project root (Firebase Console > Project settings > Service accounts). It is
@@ -12,7 +16,8 @@
  * Safe to run more than once. Keep collegeEmail and collegeAuthPassword in
  * sync with lib/collegeAuth.ts.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { cert, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
@@ -25,6 +30,7 @@ const collegeEmail = (ccCode) =>
 const collegeAuthPassword = (password) => `urja-cc:${password}`;
 
 const stripPasswords = process.argv.includes("--strip-passwords");
+const exportOnly = process.argv.includes("--export");
 
 const serviceAccount = JSON.parse(
 	readFileSync(new URL("../firebase-service-account.json", import.meta.url), "utf8"),
@@ -34,6 +40,27 @@ const auth = getAuth();
 const db = getFirestore();
 
 const snapshot = await db.collection("CollegeCreds").get();
+
+// Firebase Auth keeps only password hashes, so save a readable copy before
+// anything is stripped. Timestamped so a later run never overwrites it.
+if (stripPasswords || exportOnly) {
+	const csvCell = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+	const rows = snapshot.docs
+		.map((collegeDoc) => collegeDoc.data())
+		.filter((data) => data.Password !== undefined)
+		.map((data) => [data.ClCode, data.Name, data.Password].map(csvCell).join(","));
+
+	if (rows.length > 0) {
+		const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+		const backupUrl = new URL(`../college-passwords-${stamp}.csv`, import.meta.url);
+		writeFileSync(backupUrl, ["CC Code,College,Password", ...rows].join("\n"), "utf8");
+		console.log(`Saved ${rows.length} passwords to ${fileURLToPath(backupUrl)}\n`);
+	} else {
+		console.log("No passwords left in Firestore to back up.\n");
+	}
+
+	if (exportOnly) process.exit(0);
+}
 const seenCodes = new Set();
 let problems = 0;
 

@@ -19,6 +19,7 @@ yarn-error.log*
 .env*
 .env.local
 firebase-service-account.json
+college-passwords-*.csv
 
 # vercel
 .vercel
