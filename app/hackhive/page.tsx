@@ -53,6 +53,13 @@ export default function HackHive() {
 							↗
 						</span>
 					</a>
+					<a className="hackhive-register-cta hackhive-portal-cta" href="/hackhive/team-portal">
+						<span className="hackhive-register-cta-led" aria-hidden="true" />
+						<span>Team Portal</span>
+						<span className="hackhive-register-cta-terminal" aria-hidden="true">
+							↗
+						</span>
+					</a>
 				</div>
 
 				<section
@@ -128,6 +135,13 @@ export default function HackHive() {
 					<a className="hackhive-register-cta" href="/hackhive/registration">
 						<span className="hackhive-register-cta-led" aria-hidden="true" />
 						<span>Initialize Registration</span>
+						<span className="hackhive-register-cta-terminal" aria-hidden="true">
+							↗
+						</span>
+					</a>
+					<a className="hackhive-register-cta hackhive-portal-cta" href="/hackhive/team-portal">
+						<span className="hackhive-register-cta-led" aria-hidden="true" />
+						<span>Team Portal</span>
 						<span className="hackhive-register-cta-terminal" aria-hidden="true">
 							↗
 						</span>

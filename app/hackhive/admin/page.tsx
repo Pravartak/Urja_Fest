@@ -13,6 +13,7 @@ import {
 	signInWithPassword,
 	watchAdminRole,
 } from "@/lib/adminAuth";
+import MissionRelease from "./MissionRelease";
 
 const HACKHIVE_EVENT_NAME = "HackHive Hackathon";
 // Must match the value your approval flow writes to `status` on a request.
@@ -296,6 +297,8 @@ export default function HackHiveAdmin() {
 								onReady={() => setBoardReady(true)}
 							/>
 						</section>
+
+						<MissionRelease />
 
 						<section
 							className="section hackhive-admin-teams-section"

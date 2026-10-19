@@ -33,3 +33,9 @@ next-env.d.ts
 .claude/
 .junie/
 skills-lock.json
+# HackHive problem statements (scripts/seed-hackhive-missions.mjs)
+/hackhive-missions*.json
+
+
+#firestore
+firestore.rules

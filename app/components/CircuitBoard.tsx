@@ -884,14 +884,31 @@ export default function LcdBoard({
 				propsRef.current.onReady?.();
 			}
 		};
-		// The loader should not depend on IntersectionObserver timing.
-		renderer.render(scene, camera);
-		hasReportedReady = true;
-		propsRef.current.onReady?.();
-		tick();
+		// Compile every material's shaders before the first frame. compileAsync
+		// uses KHR_parallel_shader_compile where available, so the GPU driver
+		// works off the main thread instead of stalling the first render()
+		// (which froze the page for over a second on mid-range phones).
+		let disposed = false;
+		let started = false;
+		const start = () => {
+			if (disposed || started) return;
+			started = true;
+			window.clearTimeout(compileTimer);
+			// The loader should not depend on IntersectionObserver timing.
+			renderer.render(scene, camera);
+			hasReportedReady = true;
+			propsRef.current.onReady?.();
+			tick();
+		};
+		// compileAsync never settles if the context is lost mid-compile, so
+		// don't let the pages' loaders hang waiting for onReady.
+		const compileTimer = window.setTimeout(start, 2500);
+		renderer.compileAsync(scene, camera).then(start, start);
 
 		/* Cleanup */
 		return () => {
+			disposed = true;
+			window.clearTimeout(compileTimer);
 			cancelAnimationFrame(raf);
 			io.disconnect();
 			ro.disconnect();
