@@ -10,6 +10,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { signInCollege, signOutCollege } from "@/lib/collegeAuth";
+import { pickTeamMembers } from "@/lib/teamMembers";
 
 type Event = {
 	Id: string;
@@ -20,10 +21,7 @@ type Event = {
 type Team = {
 	id: string;
 	teamLeader?: string;
-	member2?: string;
-	member3?: string;
-	member4?: string;
-	member5?: string;
+	members: string[]; // member2..member14
 	eventName?: string;
 };
 
@@ -136,10 +134,15 @@ export default function CollegeDashboard() {
 					)
 				);
 				setTeams(
-					teamsSnapshot.docs.map((teamDoc) => ({
-						id: teamDoc.id,
-						...teamDoc.data(),
-					})) as Team[]
+					teamsSnapshot.docs.map((teamDoc) => {
+						const data = teamDoc.data();
+						return {
+							id: teamDoc.id,
+							teamLeader: data.teamLeader,
+							eventName: data.eventName,
+							members: pickTeamMembers(data, "member"),
+						};
+					}) as Team[]
 				);
 
 			const transactionsSnapshot = await getDocs(
@@ -545,10 +548,7 @@ export default function CollegeDashboard() {
 										{teams.map((team, index) => {
 											const members = [
 												team.teamLeader,
-												team.member2,
-												team.member3,
-												team.member4,
-												team.member5,
+												...team.members,
 											].filter((member): member is string => Boolean(member?.trim()));
 
 												return (

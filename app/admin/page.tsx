@@ -23,6 +23,7 @@ import {
 	watchAdminRole,
 } from "@/lib/adminAuth";
 import { createCollegeAccount } from "@/lib/collegeAuth";
+import { pickTeamMembers, TEAM_MEMBER_POSITIONS } from "@/lib/teamMembers";
 
 type Event = {
 	Id: string;
@@ -55,10 +56,7 @@ type PendingRegistration = {
 	eventId: string;
 	eventName: string;
 	selectedDay: string;
-	teamMember2: string;
-	teamMember3: string;
-	teamMember4: string;
-	teamMember5: string;
+	teamMembers: string[]; // positions 2..MAX_TEAM_SIZE, "" when empty
 	paymentProofFileName: string | null;
 	paymentProofPath: string | null;
 	paymentProofUrl: string | null;
@@ -168,10 +166,7 @@ export default function Admin() {
 
 									selectedDay: data.selectedDay ?? "",
 
-									teamMember2: data.teamMember2 ?? "",
-									teamMember3: data.teamMember3 ?? "",
-									teamMember4: data.teamMember4 ?? "",
-									teamMember5: data.teamMember5 ?? "",
+									teamMembers: pickTeamMembers(data, "teamMember"),
 									paymentProofFileName: normalizedPaymentProofName,
 									paymentProofPath: data.paymentProofPath ?? null,
 									paymentProofUrl: data.paymentProofUrl ?? null,
@@ -220,10 +215,7 @@ export default function Admin() {
 
 							selectedDay: data.selectedDay ?? "",
 
-							teamMember2: data.teamMember2 ?? "",
-							teamMember3: data.teamMember3 ?? "",
-							teamMember4: data.teamMember4 ?? "",
-							teamMember5: data.teamMember5 ?? "",
+							teamMembers: pickTeamMembers(data, "teamMember"),
 							paymentProofFileName: normalizedPaymentProofName,
 							paymentProofPath: data.paymentProofPath ?? null,
 							paymentProofUrl: data.paymentProofUrl ?? null,
@@ -367,10 +359,12 @@ export default function Admin() {
 				await setDoc(teamRef, {
 					teamName: registration.teamName,
 					teamLeader: registration.teamLeaderName,
-					member2: registration.teamMember2,
-					member3: registration.teamMember3,
-					member4: registration.teamMember4,
-					member5: registration.teamMember5,
+					...Object.fromEntries(
+						registration.teamMembers.map((member, index) => [
+							`member${TEAM_MEMBER_POSITIONS[index]}`,
+							member,
+						]),
+					),
 					eventId: registration.eventId,
 					eventName: registration.eventName,
 					createdAt: new Date(),

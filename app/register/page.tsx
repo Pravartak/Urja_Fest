@@ -18,6 +18,7 @@ import {
 	ref as storageRef,
 	uploadBytes,
 } from "firebase/storage";
+import { TEAM_MEMBER_POSITIONS } from "@/lib/teamMembers";
 
 type Event = {
 	Id: number | string;
@@ -51,6 +52,39 @@ const eventDays = [
 
 const separateDay2Events = new Set(["HackHive Hackathon", "The Pitch Room"]);
 
+type TeamSize = { min: number; max: number };
+
+// Team size per event, counting the team leader. Keyed by the Firestore event
+// Id so renaming an event doesn't lose its limits.
+const eventTeamSizes: Record<string, TeamSize> = {
+	// Day 1 - Literature Arts
+	DRs3mw9JzZpjnImyatVK: { min: 1, max: 1 }, // Stellar Punchlines
+	KLJMB26MaCepuzCWgdBG: { min: 1, max: 1 }, // Shades of Shakespeare
+	eEQcl5kjTjAfsu0x9ERA: { min: 1, max: 1 }, // Ink Verse
+	// Day 1 - Fine Arts
+	YvHSH7jjQiVXK7MXVdjK: { min: 1, max: 1 }, // Scribble Verse
+	"3sMvFccurr1uaJpgW8sH": { min: 1, max: 2 }, // Canvas of Souls
+	dP41i6bh3WJan5GJOBJT: { min: 1, max: 1 }, // Arabasque
+	// Day 1 - Solo Performances
+	"31uIVClwanqksfFZCcgV": { min: 1, max: 1 }, // Solea
+	aY9dyLV5IZHuejYmi8yu: { min: 1, max: 1 }, // Resonance
+	LUTS86JLpZNV9n5ZGjMG: { min: 1, max: 1 }, // VerseVerse
+	// Day 1 - Group Performances
+	"15gWA1hrAhARnYS4agZL": { min: 4, max: 8 }, // Harmonic Orbit
+	fvcIcIJ0IW6kBTVjXbOK: { min: 10, max: 10 }, // Theatre of Souls
+	// Day 4
+	UtPd8EKsb6VEH0UbqHgE: { min: 10, max: 10 }, // Confluence
+	sPlrTbxAymZXhmed78Zf: { min: 10, max: 14 }, // Aura
+};
+
+// Events without an entry above keep the old form: leader plus up to 3 optional members.
+const defaultTeamSize: TeamSize = { min: 1, max: 4 };
+
+const getTeamSize = (eventId: string): TeamSize =>
+	eventTeamSizes[eventId] ?? defaultTeamSize;
+
+const emptyTeamMembers = () => TEAM_MEMBER_POSITIONS.map(() => "");
+
 export default function Register() {
 	const [colleges, setColleges] = useState<College[]>([]);
 	const [day1Categories, setDay1Categories] = useState<EventCategory[]>([]);
@@ -60,7 +94,6 @@ export default function Register() {
 	const [error, setError] = useState<string | null>(null);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
-	const [showTeamMember5, setShowTeamMember5] = useState(false);
 
 	const [formData, setFormData] = useState({
 		fullName: "",
@@ -71,11 +104,7 @@ export default function Register() {
 		selectedEvent: "",
 		selectedEventId: "",
 		collegeId: "",
-		isSoloPlayer: false,
-		teamMember2: "",
-		teamMember3: "",
-		teamMember4: "",
-		teamMember5: "",
+		teamMembers: emptyTeamMembers(),
 		paymentProof: null as File | null,
 	});
 
@@ -202,26 +231,7 @@ export default function Register() {
 	const handleChange = (
 		e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
 	) => {
-		const target = e.target;
-
-		if (target instanceof HTMLInputElement) {
-			const { name, type, checked, value } = target;
-			setFormData((prev) => ({
-				...prev,
-				[name]: type === "checkbox" ? checked : value,
-				...(name === "isSoloPlayer" && checked
-					? {
-							teamMember2: "",
-							teamMember3: "",
-							teamMember4: "",
-							teamMember5: "",
-						}
-					: {}),
-			}));
-			return;
-		}
-
-		const { name, value } = target;
+		const { name, value } = e.target;
 		setFormData((prev) => ({
 			...prev,
 			[name]: value,
@@ -230,29 +240,30 @@ export default function Register() {
 						selectedCategory: "",
 						selectedEvent: "",
 						selectedEventId: "",
+						teamMembers: emptyTeamMembers(),
 					}
 				: name === "selectedCategory"
-					? { selectedEvent: "", selectedEventId: "" }
+					? {
+							selectedEvent: "",
+							selectedEventId: "",
+							teamMembers: emptyTeamMembers(),
+						}
 					: name === "selectedEvent"
-						? { selectedEventId: value }
+						? { selectedEventId: value, teamMembers: emptyTeamMembers() }
 						: {}),
 		}));
-
-		// Show teamMember5 input only if selected event is "HackHive Hackathon"
-		if (name === "selectedEvent") {
-			const event = getEventsForDay(formData.selectedDay).find(
-				(e) => String(e.Id) === value,
-			);
-			if (event?.Name === "HackHive Hackathon") {
-				setShowTeamMember5(true);
-			} else {
-				setShowTeamMember5(false);
-			}
-		} else if (name === "selectedDay") {
-			// Reset teamMember5 visibility when day changes
-			setShowTeamMember5(false);
-		}
 	};
+
+	const handleTeamMemberChange = (index: number, value: string) => {
+		setFormData((prev) => ({
+			...prev,
+			teamMembers: prev.teamMembers.map((member, i) =>
+				i === index ? value : member,
+			),
+		}));
+	};
+
+	const teamSize = getTeamSize(formData.selectedEvent);
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -320,14 +331,14 @@ export default function Register() {
 					: {}),
 				selectedEvent: selectedEvent.Name,
 				selectedEventId: String(selectedEvent.Id),
-				...(registrationData.isSoloPlayer
-					? {}
-					: {
-							teamMember2: registrationData.teamMember2,
-							teamMember3: registrationData.teamMember3,
-							teamMember4: registrationData.teamMember4,
-							teamMember5: registrationData.teamMember5,
-						}),
+				...Object.fromEntries(
+					registrationData.teamMembers
+						.slice(0, getTeamSize(String(selectedEvent.Id)).max - 1)
+						.map((member, index) => [
+							`teamMember${TEAM_MEMBER_POSITIONS[index]}`,
+							member.trim(),
+						]),
+				),
 				paymentProofUrl,
 				paymentProofPath: uploadResult.ref.fullPath,
 				paymentProofName: safeFileName,
@@ -350,11 +361,7 @@ export default function Register() {
 					selectedEvent: "",
 					selectedEventId: "",
 					collegeId: "",
-					isSoloPlayer: false,
-					teamMember2: "",
-					teamMember3: "",
-					teamMember4: "",
-					teamMember5: "",
+					teamMembers: emptyTeamMembers(),
 					paymentProof: null,
 				});
 				setSubmitted(false);
@@ -712,119 +719,30 @@ export default function Register() {
 									</div>
 								)}
 
-								<div style={{ marginBottom: "24px" }}>
-									<label
+								{formData.selectedEvent && (
+									<p
 										style={{
-											display: "flex",
-											alignItems: "center",
+											marginBottom: "24px",
 											color: "var(--text-dim)",
 											fontSize: "0.8rem",
 											letterSpacing: "1.5px",
 										}}>
-										<input
-											type="checkbox"
-											name="isSoloPlayer"
-											checked={formData.isSoloPlayer}
-											onChange={handleChange}
-											style={{ marginRight: "10px" }}
-										/>
-										SOLO PLAYER
-									</label>
-								</div>
+										{teamSize.max === 1
+											? "SOLO EVENT - NO TEAM MEMBERS NEEDED"
+											: teamSize.min === teamSize.max
+												? `TEAM OF ${teamSize.max} INCLUDING YOU`
+												: `TEAM OF ${teamSize.min} TO ${teamSize.max} INCLUDING YOU`}
+									</p>
+								)}
 
-								<>
-									<div style={{ marginBottom: "24px" }}>
-										<label
-											style={{
-												display: "block",
-												marginBottom: "10px",
-												color: "var(--text-dim)",
-												fontSize: "0.8rem",
-												letterSpacing: "1.5px",
-											}}>
-											TEAM MEMBER 2 FULL NAME
-										</label>
-										<input
-											type="text"
-											name="teamMember2"
-											value={formData.teamMember2}
-											onChange={handleChange}
-											disabled={formData.isSoloPlayer}
-											placeholder="Full name of team member 2"
-											style={{
-												width: "100%",
-												borderRadius: "10px",
-												color: "var(--text)",
-												padding: "14px 16px",
-												border: "1px solid var(--border)",
-												background: "var(--input-bg)",
-												fontSize: "0.95rem",
-												fontFamily: "inherit",
-											}}
-										/>
-									</div>
-									<div style={{ marginBottom: "24px" }}>
-										<label
-											style={{
-												display: "block",
-												marginBottom: "10px",
-												color: "var(--text-dim)",
-												fontSize: "0.8rem",
-												letterSpacing: "1.5px",
-											}}>
-											TEAM MEMBER 3 FULL NAME
-										</label>
-										<input
-											type="text"
-											name="teamMember3"
-											value={formData.teamMember3}
-											onChange={handleChange}
-											disabled={formData.isSoloPlayer}
-											placeholder="Full name of team member 3"
-											style={{
-												width: "100%",
-												borderRadius: "10px",
-												color: "var(--text)",
-												padding: "14px 16px",
-												border: "1px solid var(--border)",
-												background: "var(--input-bg)",
-												fontSize: "0.95rem",
-												fontFamily: "inherit",
-											}}
-										/>
-									</div>
-									<div style={{ marginBottom: "24px" }}>
-										<label
-											style={{
-												display: "block",
-												marginBottom: "10px",
-												color: "var(--text-dim)",
-												fontSize: "0.8rem",
-												letterSpacing: "1.5px",
-											}}>
-											TEAM MEMBER 4 FULL NAME
-										</label>
-										<input
-											type="text"
-											name="teamMember4"
-											value={formData.teamMember4}
-											onChange={handleChange}
-											disabled={formData.isSoloPlayer}
-											placeholder="Full name of team member 4"
-											style={{
-												width: "100%",
-												borderRadius: "10px",
-												color: "var(--text)",
-												padding: "14px 16px",
-												border: "1px solid var(--border)",
-												background: "var(--input-bg)",
-												fontSize: "0.95rem",
-												fontFamily: "inherit",
-											}}
-										/>
-									</div>
-									{showTeamMember5 && (
-										<div style={{ marginBottom: "24px" }}>
+								{TEAM_MEMBER_POSITIONS.filter(
+									(position) =>
+										formData.selectedEvent !== "" && position <= teamSize.max,
+								).map((position, index) => {
+									const required = position <= teamSize.min;
+
+									return (
+										<div key={position} style={{ marginBottom: "24px" }}>
 											<label
 												style={{
 													display: "block",
@@ -833,15 +751,18 @@ export default function Register() {
 													fontSize: "0.8rem",
 													letterSpacing: "1.5px",
 												}}>
-												TEAM MEMBER 5 FULL NAME
+												TEAM MEMBER {position} FULL NAME
+												{required ? "" : " (OPTIONAL)"}
 											</label>
 											<input
 												type="text"
-												name="teamMember5"
-												value={formData.teamMember5}
-												onChange={handleChange}
-												disabled={formData.isSoloPlayer}
-												placeholder="Full name of team member 5"
+												name={`teamMember${position}`}
+												value={formData.teamMembers[index]}
+												onChange={(e) =>
+													handleTeamMemberChange(index, e.target.value)
+												}
+												required={required}
+												placeholder={`Full name of team member ${position}`}
 												style={{
 													width: "100%",
 													borderRadius: "10px",
@@ -854,8 +775,8 @@ export default function Register() {
 												}}
 											/>
 										</div>
-									)}
-								</>
+									);
+								})}
 
 								{formData.selectedEvent && (
 									<div style={{ marginBottom: "24px", textAlign: "center" }}>
