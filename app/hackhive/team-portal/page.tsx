@@ -26,6 +26,7 @@ import SponsorShowcase from "./_components/SponsorShowcase";
 import ParticipantAccess, { type AccessStatus } from "./_components/ParticipantAccess";
 import TeamDashboard, { type MissionPhase } from "./_components/TeamDashboard";
 import MissionSelection from "./_components/MissionSelection";
+import FoodRedemption from "./_components/FoodRedemption";
 import "./portal.css";
 
 type FocusTarget = "access" | "team" | "missions" | null;
@@ -43,6 +44,8 @@ export default function ParticipantPortalPage() {
 	const [attempt, setAttempt] = useState(0);
 	const [team, setTeam] = useState<Team | null>(null);
 	const [participant, setParticipant] = useState<TeamMember | null>(null);
+	// The signed-in team's 4 digits (live only): its food redemption is stored under them.
+	const [accessCode, setAccessCode] = useState<string | null>(null);
 	// Lockout after too many wrong codes (live only).
 	const [triesLeft, setTriesLeft] = useState<number | null>(LIMITED ? MAX_ACCESS_ATTEMPTS : null);
 	const [lockId, setLockId] = useState<string | null>(null);
@@ -201,6 +204,7 @@ export default function ParticipantPortalPage() {
 			const isNewTeam = result.team.id !== team?.id;
 			setTeam(result.team);
 			setParticipant(result.participant);
+			setAccessCode(result.accessCode);
 			setStatus("verified");
 			if (isNewTeam) resetMission();
 			setFocusTarget("team");
@@ -213,6 +217,7 @@ export default function ParticipantPortalPage() {
 			setStatus(result.reason);
 			setTeam(null);
 			setParticipant(null);
+			setAccessCode(null);
 			resetMission();
 		}
 	};
@@ -231,6 +236,7 @@ export default function ParticipantPortalPage() {
 		setStatus("idle");
 		setTeam(null);
 		setParticipant(null);
+		setAccessCode(null);
 		resetMission();
 		setFocusTarget("access");
 	};
@@ -309,6 +315,9 @@ export default function ParticipantPortalPage() {
 							onReleaseDue={releaseNow}
 							onReturn={() => scrollToAndFocus(teamHeading.current)}
 						/>
+						{accessCode && (
+							<FoodRedemption key={accessCode} accessCode={accessCode} team={team} />
+						)}
 					</>
 				)}
 			</main>

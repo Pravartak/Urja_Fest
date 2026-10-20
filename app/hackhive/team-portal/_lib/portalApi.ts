@@ -26,8 +26,11 @@ import {
 } from "@/lib/hackhiveMissions";
 
 export type VerifyResult =
-	/** `participant` is null in live mode: a team code doesn't say who is typing. */
-	| { ok: true; team: Team; participant: TeamMember | null }
+	/**
+	 * `participant` is null in live mode: a team code doesn't say who is typing.
+	 * `accessCode` is the 4 digits in live mode, null in demo.
+	 */
+	| { ok: true; team: Team; participant: TeamMember | null; accessCode: string | null }
 	/** "format": not shaped like a code at all, so it doesn't count as a try. */
 	| { ok: false; reason: "empty" | "format" | "invalid" | "unavailable" };
 
@@ -51,17 +54,26 @@ const accessDigits = (code: string) => /^#?(\d{4})$/.exec(code)?.[1] ?? null;
 
 const clean = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
-/** Accepted teams get a Teams doc on approval (app/admin/page.tsx). */
+const MEMBER_FIELDS = ["member2", "member3", "member4", "member5"] as const;
+
+/**
+ * Accepted teams get a Teams doc on approval (app/admin/page.tsx). Member ids
+ * are the Teams field names, so they stay put when a field is blank, and the
+ * food rules can check a member against the doc (lib/hackhiveFood.ts).
+ */
 function toTeam(id: string, data: Record<string, unknown>): Team {
 	const lead = clean(data.teamLeader);
-	const others = [data.member2, data.member3, data.member4, data.member5].map(clean).filter(Boolean);
 	return {
 		id,
 		name: clean(data.teamName),
 		status: "Accepted",
 		members: [
-			...(lead ? [{ id: "lead", name: lead, role: "Team Lead" as const }] : []),
-			...others.map((name, i) => ({ id: `m${i + 2}`, name, role: "Member" as const })),
+			...(lead ? [{ id: "teamLeader", name: lead, role: "Team Lead" as const }] : []),
+			...MEMBER_FIELDS.filter((field) => clean(data[field])).map((field) => ({
+				id: field,
+				name: clean(data[field]),
+				role: "Member" as const,
+			})),
 		],
 	};
 }
@@ -88,7 +100,7 @@ export async function verifyAccessCode(raw: string): Promise<VerifyResult> {
 			if (!teamDoc.exists() || teamDoc.data().eventName !== HACKHIVE_EVENT_NAME) {
 				return { ok: false, reason: "invalid" };
 			}
-			return { ok: true, team: toTeam(teamDoc.id, teamDoc.data()), participant: null };
+			return { ok: true, team: toTeam(teamDoc.id, teamDoc.data()), participant: null, accessCode: digits };
 		} catch (error) {
 			console.error("Team lookup failed:", error);
 			return { ok: false, reason: "unavailable" };
@@ -100,7 +112,7 @@ export async function verifyAccessCode(raw: string): Promise<VerifyResult> {
 	const participant = team?.members.find((m) => m.id === match.memberId);
 	if (!team || !participant) return { ok: false, reason: "invalid" };
 
-	return { ok: true, team, participant };
+	return { ok: true, team, participant, accessCode: null };
 }
 
 export interface ReleaseStatus {
