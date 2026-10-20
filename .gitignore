@@ -39,3 +39,4 @@ skills-lock.json
 
 #firestore
 firestore.rules
+/hackhive-access-codes*.csv

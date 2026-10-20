@@ -10,6 +10,15 @@ import {
 	watchMissions,
 	watchReleaseStatus,
 } from "./_lib/portalApi";
+import {
+	ATTEMPTS_KEY,
+	MAX_ACCESS_ATTEMPTS,
+	clearAttempts,
+	readAttempts,
+	recordFailure,
+	reportLockout,
+	watchLockout,
+} from "./_lib/accessLock";
 import { scrollToAndFocus } from "./_lib/gsap";
 import HeroSection from "./_components/HeroSection";
 import EventDetails from "./_components/EventDetails";
@@ -20,6 +29,8 @@ import MissionSelection from "./_components/MissionSelection";
 import "./portal.css";
 
 type FocusTarget = "access" | "team" | "missions" | null;
+
+const LIMITED = PORTAL_MODE === "live";
 
 export default function ParticipantPortalPage() {
 	// Access
@@ -32,6 +43,10 @@ export default function ParticipantPortalPage() {
 	const [attempt, setAttempt] = useState(0);
 	const [team, setTeam] = useState<Team | null>(null);
 	const [participant, setParticipant] = useState<TeamMember | null>(null);
+	// Lockout after too many wrong codes (live only).
+	const [triesLeft, setTriesLeft] = useState<number | null>(LIMITED ? MAX_ACCESS_ATTEMPTS : null);
+	const [lockId, setLockId] = useState<string | null>(null);
+	const reporting = useRef(false);
 
 	// Missions
 	const [released, setReleased] = useState(false);
@@ -48,6 +63,51 @@ export default function ParticipantPortalPage() {
 	const teamHeading = useRef<HTMLHeadingElement>(null);
 	const missionsHeading = useRef<HTMLHeadingElement>(null);
 	const [focusTarget, setFocusTarget] = useState<FocusTarget>(null);
+
+	// Pick up a count or lock from earlier visits, and from other tabs.
+	useEffect(() => {
+		if (!LIMITED) return;
+		const sync = () => {
+			const saved = readAttempts();
+			setTriesLeft(MAX_ACCESS_ATTEMPTS - saved.tried.length);
+			setLockId(saved.lockId);
+		};
+		sync();
+		const onStorage = (e: StorageEvent) => {
+			if (e.key === ATTEMPTS_KEY || e.key === null) sync();
+		};
+		window.addEventListener("storage", onStorage);
+		return () => window.removeEventListener("storage", onStorage);
+	}, []);
+
+	// While locked, make sure the organizers know, and re-open the moment they unlock.
+	useEffect(() => {
+		if (!lockId) return;
+		let retryTimer: number | undefined;
+		const stop = watchLockout(
+			lockId,
+			() => {
+				if (reporting.current) return;
+				reporting.current = true;
+				reportLockout(lockId, readAttempts().tried).catch((error) => {
+					console.error("Could not report the lockout:", error);
+					// Let the next server answer try again, but not in a tight loop.
+					retryTimer = window.setTimeout(() => (reporting.current = false), 15000);
+				});
+			},
+			() => {
+				clearAttempts();
+				setLockId(null);
+				setTriesLeft(MAX_ACCESS_ATTEMPTS);
+				setStatus("reopened");
+			},
+		);
+		return () => {
+			window.clearTimeout(retryTimer);
+			reporting.current = false;
+			stop();
+		};
+	}, [lockId]);
 
 	// The organizers' release switch, pushed live: no reload needed.
 	useEffect(() => {
@@ -124,7 +184,7 @@ export default function ParticipantPortalPage() {
 	};
 
 	const handleVerify = async () => {
-		if (verifying) return;
+		if (verifying || lockId) return;
 		const request = ++verifyRequest.current;
 		setVerifying(true);
 		const result = await verifyAccessCode(code);
@@ -134,6 +194,10 @@ export default function ParticipantPortalPage() {
 		setAttempt((n) => n + 1);
 		// Narrow on a property check: the project runs without strictNullChecks.
 		if (!("reason" in result)) {
+			if (LIMITED) {
+				clearAttempts();
+				setTriesLeft(MAX_ACCESS_ATTEMPTS);
+			}
 			const isNewTeam = result.team.id !== team?.id;
 			setTeam(result.team);
 			setParticipant(result.participant);
@@ -141,6 +205,11 @@ export default function ParticipantPortalPage() {
 			if (isNewTeam) resetMission();
 			setFocusTarget("team");
 		} else {
+			if (LIMITED && result.reason === "invalid") {
+				const counted = recordFailure(code);
+				setTriesLeft(MAX_ACCESS_ATTEMPTS - counted.tried.length);
+				setLockId(counted.lockId);
+			}
 			setStatus(result.reason);
 			setTeam(null);
 			setParticipant(null);
@@ -199,6 +268,8 @@ export default function ParticipantPortalPage() {
 					verifying={verifying}
 					attempt={attempt}
 					teamName={team?.name}
+					locked={!!lockId}
+					triesLeft={triesLeft}
 					onCodeChange={(v) => {
 						verifyRequest.current++;
 						setVerifying(false);

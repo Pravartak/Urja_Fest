@@ -8,9 +8,9 @@
  *   • MISSION_RELEASE     → whether / when problem statements unlock (demo mode)
  *   • PORTAL_FLAGS        → demo-only helpers shown in the UI
  *
- * In live mode a team signs in with its registered team name, looked up among
- * the accepted HackHive teams in Firestore (Teams). Selections are still only
- * kept in the browser tab.
+ * In live mode a team signs in with the access code allotted to it, like #4821
+ * (scripts/assign-hackhive-access-codes.mjs). Selections are still only kept in
+ * the browser tab.
  */
 
 /**

@@ -3,8 +3,8 @@
  *
  * Every function returns plain data so the UI never needs to change when these
  * are swapped for real calls. In live mode (PORTAL_MODE) a team signs in with
- * its team name, and the mission release and the problem statements come from
- * Firestore, pushed live. Selections still happen only in this browser tab.
+ * its access code, and the mission release and the problem statements come
+ * from Firestore, pushed live. Selections still happen only in this browser tab.
  */
 
 import type { Firestore } from "firebase/firestore";
@@ -26,29 +26,28 @@ import {
 } from "@/lib/hackhiveMissions";
 
 export type VerifyResult =
-	/** `participant` is null in live mode: a team name doesn't say who is typing. */
+	/** `participant` is null in live mode: a team code doesn't say who is typing. */
 	| { ok: true; team: Team; participant: TeamMember | null }
-	| { ok: false; reason: "empty" | "invalid" | "ambiguous" | "unavailable" };
+	/** "format": not shaped like a code at all, so it doesn't count as a try. */
+	| { ok: false; reason: "empty" | "format" | "invalid" | "unavailable" };
 
 export type Unsubscribe = () => void;
 
-/**
- * Ignores case, spaces and the look-alike characters phones auto-insert
- * (curly quotes, dashes, zero-width marks), so a team name typed on any
- * device matches the one stored at registration.
- */
 export const normalizeCode = (raw: string) =>
-	raw
-		.normalize("NFKC")
-		.replace(/[\u200B-\u200D\u2060\uFEFF]/g, "")
-		.replace(/[\u2018\u2019\u201B\u02BC\u0060\u00B4]/g, "'")
-		.replace(/[\u201C\u201D\u201F]/g, '"')
-		.replace(/[\u2010-\u2015\u2212]/g, "-")
-		.replace(/\s+/g, "")
-		.toUpperCase();
+	raw.replace(/\s+/g, "").toUpperCase();
 
 /** Must match the eventName the approval flow writes on Teams docs. */
 const HACKHIVE_EVENT_NAME = "HackHive Hackathon";
+
+/**
+ * HackHiveTeamAccess/{4 digits} -> { teamId }, written by
+ * scripts/assign-hackhive-access-codes.mjs. Codes can be looked up one at a
+ * time but never listed (firestore.rules).
+ */
+const ACCESS_COLLECTION = "HackHiveTeamAccess";
+
+/** "#4821", "4821" and "# 4821" all mean code 4821. */
+const accessDigits = (code: string) => /^#?(\d{4})$/.exec(code)?.[1] ?? null;
 
 const clean = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
@@ -72,23 +71,24 @@ export async function verifyAccessCode(raw: string): Promise<VerifyResult> {
 	if (!code) return { ok: false, reason: "empty" };
 
 	if (PORTAL_MODE === "live") {
-		// The access code is the team name; capitals and spaces don't matter.
+		const digits = accessDigits(code);
+		if (!digits) return { ok: false, reason: "format" };
 		try {
 			const [fs, { db }] = await Promise.all([
 				import("firebase/firestore"),
 				import("@/lib/firebase"),
 			]);
-			// From the server only: offline, getDocs would answer from an empty
-			// cache and the team would be told its name is wrong.
-			const snap = await fs.getDocsFromServer(
-				fs.query(fs.collection(db, "Teams"), fs.where("eventName", "==", HACKHIVE_EVENT_NAME)),
-			);
-			const matches = snap.docs.filter((d) => normalizeCode(clean(d.data().teamName)) === code);
-			if (matches.length === 0) return { ok: false, reason: "invalid" };
-			// Two accepted teams with the same name: let the organizers sort it out
-			// rather than show one team the other's page.
-			if (matches.length > 1) return { ok: false, reason: "ambiguous" };
-			return { ok: true, team: toTeam(matches[0].id, matches[0].data()), participant: null };
+			// From the server only: offline, the cache would answer "no such code"
+			// and the team would be told its code is wrong.
+			const access = await fs.getDocFromServer(fs.doc(db, ACCESS_COLLECTION, digits));
+			const teamId = clean(access.data()?.teamId);
+			if (!teamId) return { ok: false, reason: "invalid" };
+			const teamDoc = await fs.getDocFromServer(fs.doc(db, "Teams", teamId));
+			// A code left behind by a deleted team signs nobody in.
+			if (!teamDoc.exists() || teamDoc.data().eventName !== HACKHIVE_EVENT_NAME) {
+				return { ok: false, reason: "invalid" };
+			}
+			return { ok: true, team: toTeam(teamDoc.id, teamDoc.data()), participant: null };
 		} catch (error) {
 			console.error("Team lookup failed:", error);
 			return { ok: false, reason: "unavailable" };

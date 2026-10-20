@@ -14,6 +14,7 @@ import {
 	watchAdminRole,
 } from "@/lib/adminAuth";
 import MissionRelease from "./MissionRelease";
+import AccessLockouts from "./AccessLockouts";
 
 const HACKHIVE_EVENT_NAME = "HackHive Hackathon";
 // Must match the value your approval flow writes to `status` on a request.
@@ -417,6 +418,9 @@ export default function HackHiveAdmin() {
 								)}
 							</div>
 						</section>
+
+						{/* Last: the page is projected at the opening, lockouts come later. */}
+						<AccessLockouts />
 					</section>
 				)}
 			</PCBBackground>

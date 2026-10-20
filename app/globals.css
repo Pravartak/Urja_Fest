@@ -3431,6 +3431,33 @@ img {
   box-shadow: inset 0 0 18px rgba(255, 241, 242, 0.3), 0 0 20px rgba(244, 63, 94, 0.4) !important;
 }
 
+/* HackHive admin: team portal lockouts (app/hackhive/admin/AccessLockouts.tsx) */
+.hackhive-admin-lockouts-section {
+  padding-bottom: 48px;
+}
+
+.hackhive-admin-lockout-list {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hackhive-admin-lockout-card .hackhive-admin-release-state {
+  color: #fb7185;
+}
+
+.hackhive-admin-lockout-tried {
+  display: grid;
+  gap: 4px;
+  color: #f5faff;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 520px) {
   .hackhive-admin-release-section {
     padding: 28px 14px 4px;
