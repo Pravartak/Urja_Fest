@@ -24,6 +24,12 @@ import {
 } from "@/lib/adminAuth";
 import { createCollegeAccount } from "@/lib/collegeAuth";
 import { pickTeamMembers, TEAM_MEMBER_POSITIONS } from "@/lib/teamMembers";
+import {
+	getHackHiveTeamNames,
+	HACKHIVE_EVENT_NAME,
+	HACKHIVE_MAX_TEAMS,
+	normalizeTeamName,
+} from "@/lib/hackhiveRegistration";
 
 type Event = {
 	Id: string;
@@ -353,6 +359,20 @@ export default function Admin() {
 				// 1. Create Team first (both a real college and "Other College"
 				// registrations become a Team doc, so reporting always has one
 				// place to see every accepted team for the event).
+				// HackHive is capped, with one team per name. Registrants are
+				// checked too, but two pending requests can still collide here.
+				if (registration.eventName === HACKHIVE_EVENT_NAME) {
+					const acceptedNames = await getHackHiveTeamNames();
+					if (acceptedNames.length >= HACKHIVE_MAX_TEAMS) {
+						showHint(`HackHive is full: ${HACKHIVE_MAX_TEAMS} teams are already accepted.`, true);
+						return;
+					}
+					if (acceptedNames.includes(normalizeTeamName(registration.teamName))) {
+						showHint(`An accepted team is already called "${registration.teamName}".`, true);
+						return;
+					}
+				}
+
 				const teamRef = doc(collection(db, "Teams"));
 				const teamId = teamRef.id;
 

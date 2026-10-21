@@ -29,6 +29,12 @@ import {
 	ref as storageRef,
 	uploadBytes,
 } from "firebase/storage";
+import {
+	getHackHiveTeamNames,
+	HACKHIVE_MAX_TEAMS,
+	normalizeTeamName,
+	watchHackHiveTeamNames,
+} from "@/lib/hackhiveRegistration";
 
 const LcdBoard = dynamic(() => import("@/app/components/CircuitBoard"), {
 	ssr: false,
@@ -87,6 +93,22 @@ export default function Register() {
 	});
 
 	const [submitted, setSubmitted] = useState(false);
+	// Accepted HackHive teams' names, live; null until known (or if unreadable).
+	const [teamNames, setTeamNames] = useState<string[] | null>(null);
+
+	useEffect(
+		() =>
+			watchHackHiveTeamNames(setTeamNames, (watchError) =>
+				console.warn("Couldn't watch HackHive teams:", watchError),
+			),
+		[],
+	);
+
+	const registrationClosed =
+		teamNames !== null && teamNames.length >= HACKHIVE_MAX_TEAMS;
+	const typedTeamName = normalizeTeamName(formData.teamName);
+	const teamNameTaken =
+		teamNames !== null && typedTeamName !== "" && teamNames.includes(typedTeamName);
 
 	const teamMemberCount = formData.isSoloPlayer
 		? 1
@@ -314,6 +336,18 @@ export default function Register() {
 		setSubmitting(true);
 
 		try {
+			// Fresh from the server, so a team accepted a moment ago counts. If it
+			// can't be read, go ahead: the admin page checks again on approval.
+			const latestNames = await getHackHiveTeamNames().catch(() => null);
+			if (latestNames) {
+				setTeamNames(latestNames);
+				if (latestNames.length >= HACKHIVE_MAX_TEAMS) return;
+				if (latestNames.includes(normalizeTeamName(formData.teamName))) {
+					setSubmitError("This team name is taken. Please pick another one.");
+					return;
+				}
+			}
+
 			// Existing colleges keep their registrations nested under
 			// CollegeCreds/{collegeId}/Requests, same as before. "Other College"
 			// registrations have no real college to nest under, so they go in
@@ -471,6 +505,31 @@ export default function Register() {
 									sent for approval.
 								</p>
 							</div>
+						) : registrationClosed ? (
+							<div
+								className="hackhive-registration-closed"
+								role="status"
+								style={{
+									background: "var(--card)",
+									border: "1px solid var(--border)",
+									borderRadius: "18px",
+									padding: "40px",
+									textAlign: "center",
+								}}>
+								<div style={{ fontSize: "3rem", marginBottom: "20px" }}>🔒</div>
+								<h3
+									style={{
+										fontSize: "1.5rem",
+										marginBottom: "10px",
+										color: "var(--gold)",
+									}}>
+									Registrations Closed
+								</h3>
+								<p style={{ color: "var(--text-dim)" }}>
+									All {HACKHIVE_MAX_TEAMS} team slots for HACKHIVE 2026 are filled.
+									Thank you for your interest!
+								</p>
+							</div>
 						) : (
 							<form
 								className="hackhive-registration-form"
@@ -501,17 +560,33 @@ export default function Register() {
 										required
 										maxLength={60}
 										placeholder="Your team's name"
+										aria-invalid={teamNameTaken}
+										aria-describedby="team-name-status"
 										style={{
 											width: "100%",
 											borderRadius: "10px",
 											color: "var(--text)",
 											padding: "14px 16px",
-											border: "1px solid var(--border)",
+											border: `1px solid ${teamNameTaken ? "#ff8f8f" : "var(--border)"}`,
 											background: "var(--input-bg)",
 											fontSize: "0.95rem",
 											fontFamily: "inherit",
 										}}
 									/>
+									<p
+										id="team-name-status"
+										aria-live="polite"
+										style={{
+											marginTop: "8px",
+											fontSize: "0.85rem",
+											color: teamNameTaken ? "#ff8f8f" : "rgb(80, 220, 140)",
+										}}>
+										{teamNames !== null && typedTeamName !== ""
+											? teamNameTaken
+												? "This name is taken"
+												: "This name is available"
+											: null}
+									</p>
 								</div>
 
 								<div style={{ marginBottom: "24px" }}>
@@ -940,6 +1015,7 @@ export default function Register() {
 									disabled={
 										submitting ||
 										loading ||
+										teamNameTaken ||
 										(colleges.length === 0 &&
 											formData.collegeId !== OTHER_COLLEGE_VALUE)
 									}
