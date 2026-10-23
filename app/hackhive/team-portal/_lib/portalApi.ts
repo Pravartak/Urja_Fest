@@ -24,6 +24,7 @@ import {
 	sortMissions,
 	toMission,
 } from "@/lib/hackhiveMissions";
+import { HACKHIVE_ROOMS, ROOMS_COLLECTION } from "@/lib/hackhiveRooms";
 
 export type VerifyResult =
 	/**
@@ -218,6 +219,35 @@ export function watchMissions(
 							({ id, code, title, summary }) => ({ id, code, title, summary }),
 						),
 					);
+				},
+				onError,
+			),
+		onError,
+	);
+}
+
+/**
+ * Streams the team's room (null while none is assigned), including moves made
+ * later. Like the missions, only call it once released.
+ */
+export function watchRoom(
+	teamId: string,
+	onChange: (room: string | null) => void,
+	onError: (error: unknown) => void,
+): Unsubscribe {
+	if (PORTAL_MODE === "demo") {
+		onChange(HACKHIVE_ROOMS[0]);
+		return () => {};
+	}
+	return subscribeLazily(
+		(fs, db) =>
+			fs.onSnapshot(
+				fs.doc(db, ROOMS_COLLECTION, teamId),
+				{ includeMetadataChanges: true },
+				(snap) => {
+					// A missing doc in the local cache is not "no room".
+					if (snap.metadata.fromCache && !snap.exists()) return;
+					onChange(clean(snap.data()?.room) || null);
 				},
 				onError,
 			),

@@ -27,6 +27,7 @@ import ParticipantAccess, { type AccessStatus } from "./_components/ParticipantA
 import TeamDashboard, { type MissionPhase } from "./_components/TeamDashboard";
 import MissionSelection from "./_components/MissionSelection";
 import FoodRedemption from "./_components/FoodRedemption";
+import RoomAssignment from "./_components/RoomAssignment";
 import "./portal.css";
 
 type FocusTarget = "access" | "team" | "missions" | null;
@@ -315,6 +316,7 @@ export default function ParticipantPortalPage() {
 							onReleaseDue={releaseNow}
 							onReturn={() => scrollToAndFocus(teamHeading.current)}
 						/>
+						<RoomAssignment teamId={team.id} released={released} />
 						{accessCode && (
 							<FoodRedemption key={accessCode} accessCode={accessCode} team={team} />
 						)}

@@ -486,6 +486,7 @@ html:has(.hhp-portal .hackhive-loader) {
 .hhp-done,
 .hhp-team-card,
 .hhp-food-card,
+.hhp-room-card,
 .hhp-event-date,
 .hhp-sponsor-board {
 	position: relative;
@@ -501,6 +502,7 @@ html:has(.hhp-portal .hackhive-loader) {
 .hhp-done::after,
 .hhp-team-card::after,
 .hhp-food-card::after,
+.hhp-room-card::after,
 .hhp-event-date::after,
 .hhp-sponsor-board::after {
 	content: "";
@@ -1859,6 +1861,56 @@ div.hhp-loading p {
 	display: grid;
 	grid-template-columns: 1fr auto;
 	gap: 10px;
+}
+
+/* ---------- room ---------- */
+
+.hhp-room-card {
+	padding: 20px 18px 22px;
+}
+
+.hhp-room-card.is-found {
+	box-shadow: inset 0 0 0 1px var(--hhp-line-strong);
+}
+
+.hhp-room-note {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: 0;
+	color: var(--hhp-dim);
+	line-height: 1.55;
+}
+
+.hhp-room-glyph {
+	flex: none;
+	color: var(--hhp-cyan-2);
+	font-size: 1.2rem;
+}
+
+.hhp-room-name {
+	margin: 10px 0 14px;
+	font-family: var(--font-display);
+	font-size: clamp(1.55rem, 8vw, 2.7rem);
+	font-weight: 800;
+	letter-spacing: 0.06em;
+	line-height: 1.1;
+	overflow-wrap: anywhere;
+	color: var(--hhp-gold);
+	text-shadow: 0 0 18px rgba(232, 194, 106, 0.35);
+}
+
+.hhp-room-hint {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+	margin: 0;
+	padding-top: 14px;
+	border-top: 1px solid var(--hhp-line);
+	color: var(--hhp-text);
+	font-family: var(--hhp-mono);
+	font-size: 0.88rem;
+	line-height: 1.5;
 }
 
 @media (min-width: 420px) {
