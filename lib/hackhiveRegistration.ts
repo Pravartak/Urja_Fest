@@ -9,7 +9,7 @@ import { collection, getDocs, onSnapshot, query, where, type Unsubscribe } from 
 import { db } from "@/lib/firebase";
 
 export const HACKHIVE_EVENT_NAME = "HackHive Hackathon";
-export const HACKHIVE_MAX_TEAMS = 27;
+export const HACKHIVE_MAX_TEAMS = 28;
 
 /** "  Code  Ninjas " and "code ninjas" are the same name. */
 export const normalizeTeamName = (name: string) => name.trim().replace(/\s+/g, " ").toLowerCase();
