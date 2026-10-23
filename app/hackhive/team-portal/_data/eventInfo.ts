@@ -5,7 +5,7 @@ export const EVENT = {
 	tagline: "Intelligence for Tomorrow",
 	date: "27 October 2026",
 	duration: "Six hours",
-	prizePool: "Up to ₹10,000",
+	prizePool: "₹10,000",
 	teamSize: "1–5 members",
 	fee: "₹100 per member",
 	venue:
