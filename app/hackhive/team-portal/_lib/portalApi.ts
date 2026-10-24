@@ -4,7 +4,7 @@
  * Every function returns plain data so the UI never needs to change when these
  * are swapped for real calls. In live mode (PORTAL_MODE) a team signs in with
  * its access code, and the mission release and the problem statements come
- * from Firestore, pushed live. Selections still happen only in this browser tab.
+ * from Firestore, pushed live, and the team's mission choice is saved there.
  */
 
 import type { Firestore } from "firebase/firestore";
@@ -19,6 +19,7 @@ import {
 import type { Mission } from "../_data/demoMissions";
 import {
 	MISSIONS_COLLECTION,
+	MISSION_CHOICES_COLLECTION,
 	RELEASE_DOC_PATH,
 	isReleased,
 	sortMissions,
@@ -255,10 +256,62 @@ export function watchRoom(
 	);
 }
 
+/**
+ * Streams the team's chosen mission id (null while none is chosen), so every
+ * member's phone shows the choice, and an organizer's change, live.
+ */
+export function watchMissionChoice(
+	accessCode: string,
+	onChange: (missionId: string | null) => void,
+	onError: (error: unknown) => void,
+): Unsubscribe {
+	return subscribeLazily(
+		(fs, db) =>
+			fs.onSnapshot(
+				fs.doc(db, MISSION_CHOICES_COLLECTION, accessCode),
+				{ includeMetadataChanges: true },
+				(snap) => {
+					// A missing doc in the local cache is not "nothing chosen".
+					if (snap.metadata.fromCache && !snap.exists()) return;
+					onChange(clean(snap.data()?.missionId) || null);
+				},
+				onError,
+			),
+		onError,
+	);
+}
+
+/**
+ * "taken": another member of the team chose first. "rejected": the rules
+ * refused it, e.g. the missions were locked again.
+ */
+export type MissionChoiceError = "taken" | "rejected" | "unavailable";
+
+export type MissionChoiceResult = { ok: true } | { ok: false; reason: MissionChoiceError };
+
+/**
+ * Saves the team's mission once, under its access code. A transaction, so it
+ * fails fast when offline and two phones confirming together can't both win.
+ * In demo mode (no access code) nothing is saved.
+ */
 export async function submitMissionSelection(
+	accessCode: string | null,
 	teamId: string,
 	missionId: string,
-): Promise<{ ok: true; recordedAt: Date; teamId: string; missionId: string }> {
-	// Prototype only: recorded in component state, not persisted anywhere.
-	return { ok: true, recordedAt: new Date(), teamId, missionId };
+): Promise<MissionChoiceResult> {
+	if (!accessCode) return { ok: true };
+	try {
+		const [fs, { db }] = await Promise.all([import("firebase/firestore"), import("@/lib/firebase")]);
+		const choice = fs.doc(db, MISSION_CHOICES_COLLECTION, accessCode);
+		const taken = await fs.runTransaction(db, async (tx) => {
+			if ((await tx.get(choice)).exists()) return true;
+			tx.set(choice, { teamId, missionId, chosenAt: fs.serverTimestamp() });
+			return false;
+		});
+		return taken ? { ok: false, reason: "taken" } : { ok: true };
+	} catch (error) {
+		console.error("Mission choice failed:", error);
+		const code = (error as { code?: string }).code;
+		return { ok: false, reason: code === "permission-denied" ? "rejected" : "unavailable" };
+	}
 }

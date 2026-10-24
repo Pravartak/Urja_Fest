@@ -7,8 +7,10 @@ import type { Mission } from "./_data/demoMissions";
 import {
 	submitMissionSelection,
 	verifyAccessCode,
+	watchMissionChoice,
 	watchMissions,
 	watchReleaseStatus,
+	type MissionChoiceError,
 } from "./_lib/portalApi";
 import {
 	ATTEMPTS_KEY,
@@ -61,7 +63,11 @@ export default function ParticipantPortalPage() {
 	const [missionsFailed, setMissionsFailed] = useState(false);
 	const [missionsAttempt, setMissionsAttempt] = useState(0);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
-	const [confirmed, setConfirmed] = useState<Mission | null>(null);
+	// The chosen mission's id: saved for the whole team in live mode (undefined
+	// while it loads), kept in this tab in demo mode.
+	const [choiceId, setChoiceId] = useState<string | null | undefined>(LIMITED ? undefined : null);
+	const [confirming, setConfirming] = useState(false);
+	const [confirmError, setConfirmError] = useState<MissionChoiceError | null>(null);
 
 	const accessHeading = useRef<HTMLHeadingElement>(null);
 	const teamHeading = useRef<HTMLHeadingElement>(null);
@@ -129,11 +135,13 @@ export default function ParticipantPortalPage() {
 		);
 	}, [releaseAttempt]);
 
-	// If the organizers lock the missions again, drop any choice made from them.
+	// If the organizers lock the missions again, drop any unsaved pick. A saved
+	// choice stays saved and shows again on the next release.
 	useEffect(() => {
 		if (released) return;
 		setSelectedId(null);
-		setConfirmed(null);
+		setConfirmError(null);
+		if (!LIMITED) setChoiceId(null);
 	}, [released]);
 
 	// Missions are only requested once released, and dropped if locked again.
@@ -170,6 +178,19 @@ export default function ParticipantPortalPage() {
 		};
 	}, [released, teamId, missionsAttempt]);
 
+	// The team's saved choice (live only), so every member's phone shows it.
+	useEffect(() => {
+		if (!accessCode) return;
+		const stop = watchMissionChoice(accessCode, setChoiceId, (error) => {
+			console.error("Mission choice unavailable:", error);
+			setMissionsFailed(true);
+		});
+		return () => {
+			stop();
+			setChoiceId(undefined);
+		};
+	}, [accessCode, missionsAttempt]);
+
 	// Scroll + focus after the target section has rendered.
 	useEffect(() => {
 		if (!focusTarget) return;
@@ -184,7 +205,8 @@ export default function ParticipantPortalPage() {
 
 	const resetMission = () => {
 		setSelectedId(null);
-		setConfirmed(null);
+		setConfirmError(null);
+		if (!LIMITED) setChoiceId(null);
 	};
 
 	const handleVerify = async () => {
@@ -244,9 +266,16 @@ export default function ParticipantPortalPage() {
 
 	const handleConfirm = async () => {
 		const mission = missions?.find((m) => m.id === selectedId);
-		if (!team || !mission) return;
-		const res = await submitMissionSelection(team.id, mission.id);
-		if (res.ok) setConfirmed(mission);
+		if (!team || !mission || confirming) return;
+		const request = verifyRequest.current;
+		setConfirming(true);
+		setConfirmError(null);
+		const res = await submitMissionSelection(accessCode, team.id, mission.id);
+		setConfirming(false);
+		// Signed out or switched team meanwhile.
+		if (request !== verifyRequest.current) return;
+		if ("reason" in res) setConfirmError(res.reason);
+		else setChoiceId(mission.id);
 	};
 
 	// Demo only: in live mode only the organizers' switch can unlock missions.
@@ -254,7 +283,11 @@ export default function ParticipantPortalPage() {
 		if (PORTAL_MODE === "demo") setReleased(true);
 	}, []);
 
+	// Only while released: a saved choice stays hidden while the missions are locked.
+	const confirmed = (released && choiceId && missions?.find((m) => m.id === choiceId)) || null;
 	const missionPhase: MissionPhase = confirmed ? "confirmed" : released ? "open" : "locked";
+	// Not listed before the saved choice is known, so nobody picks over it.
+	const shownMissions = choiceId === undefined ? null : missions;
 
 	return (
 		<PCBBackground className="page-wrap hackhive-page-background hhp-portal">
@@ -302,15 +335,20 @@ export default function ParticipantPortalPage() {
 							ref={missionsHeading}
 							released={released}
 							releaseAt={releaseAt}
-							missions={missions}
+							missions={shownMissions}
 							releaseFailed={releaseFailed}
 							onRetryRelease={() => setReleaseAttempt((n) => n + 1)}
 							missionsFailed={missionsFailed}
 							onRetryMissions={() => setMissionsAttempt((n) => n + 1)}
 							selectedId={selectedId}
 							confirmed={confirmed}
+							confirming={confirming}
+							confirmError={confirmError}
 							teamName={team.name}
-							onSelect={setSelectedId}
+							onSelect={(id) => {
+								setSelectedId(id);
+								setConfirmError(null);
+							}}
 							onConfirm={handleConfirm}
 							onSimulateRelease={releaseNow}
 							onReleaseDue={releaseNow}

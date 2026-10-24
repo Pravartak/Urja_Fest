@@ -41,4 +41,5 @@ skills-lock.json
 firestore.rules
 /hackhive-access-codes*.csv
 /hackhive-rooms*.csv
+/hackhive-mission-choices*.csv
 /food-stall-qr.*

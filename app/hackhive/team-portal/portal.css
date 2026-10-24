@@ -1451,6 +1451,17 @@ div.hhp-loading p {
 	color: var(--hhp-cyan-2);
 }
 
+.hhp-mission-final {
+	margin: 6px 0 0;
+	color: var(--hhp-faint);
+	font-size: 0.8rem;
+	line-height: 1.5;
+}
+
+.hhp-mission-confirm .hhp-feedback {
+	margin-top: 10px;
+}
+
 /* ---------- completion ---------- */
 
 .hhp-done-sweep {

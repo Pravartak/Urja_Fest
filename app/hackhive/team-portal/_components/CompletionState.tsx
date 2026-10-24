@@ -77,7 +77,7 @@ export default function CompletionState({ mission, teamName, onReturn }: Props) 
 				<p className="hhp-note hhp-done-reveal">
 					{PORTAL_MODE === "demo"
 						? "Recorded in this prototype only. Your choice is kept in this browser tab and has not been sent to any server."
-						: "Your choice is kept on this device only. Show this screen to the organizers so they can record your mission."}
+						: "Saved for your whole team: every member sees this mission when they sign in. To change it, ask an organizer at the help desk."}
 				</p>
 
 				<button type="button" className="hhp-btn hhp-btn-ghost hhp-done-reveal" onClick={onReturn}>

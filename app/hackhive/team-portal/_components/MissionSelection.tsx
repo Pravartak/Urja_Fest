@@ -5,6 +5,7 @@ import { Lock } from "lucide-react";
 import type { Mission } from "../_data/demoMissions";
 import { EVENT } from "../_data/eventInfo";
 import { PORTAL_FLAGS, PORTAL_MODE } from "../_data/portalConfig";
+import type { MissionChoiceError } from "../_lib/portalApi";
 import { EASE, MOTION_QUERIES, SPRING, gsap, useGSAP } from "../_lib/gsap";
 import CompletionState from "./CompletionState";
 
@@ -18,6 +19,9 @@ interface Props {
 	onRetryMissions: () => void;
 	selectedId: string | null;
 	confirmed: Mission | null;
+	/** Saving the choice. */
+	confirming: boolean;
+	confirmError: MissionChoiceError | null;
 	teamName: string;
 	onSelect: (id: string) => void;
 	onConfirm: () => void;
@@ -219,11 +223,19 @@ function LockedVault({
 	);
 }
 
+const CONFIRM_ERRORS: Record<MissionChoiceError, string> = {
+	taken: "Your team has already chosen a mission. To change it, ask an organizer at the help desk.",
+	rejected: "Your choice wasn't saved. Please ask an organizer at the help desk.",
+	unavailable: "Couldn't save your choice. Check your connection and try again.",
+};
+
 function MissionList({
 	missions,
 	missionsFailed,
 	onRetryMissions,
 	selectedId,
+	confirming,
+	confirmError,
 	onSelect,
 	onConfirm,
 }: Props) {
@@ -265,7 +277,7 @@ function MissionList({
 
 	const submit = (e: FormEvent) => {
 		e.preventDefault();
-		if (selectedId) onConfirm();
+		if (selectedId && !confirming) onConfirm();
 	};
 
 	const selected = missions?.find((m) => m.id === selectedId);
@@ -335,18 +347,31 @@ function MissionList({
 			)}
 
 			<div className="hhp-mission-confirm">
-				<p className="hhp-mission-choice" aria-live="polite">
-					{selected ? (
-						<>
-							Selected: <strong>{selected.title}</strong>
-						</>
-					) : (
-						"No mission selected yet."
+				<div>
+					<p className="hhp-mission-choice" aria-live="polite">
+						{selected ? (
+							<>
+								Selected: <strong>{selected.title}</strong>
+							</>
+						) : (
+							"No mission selected yet."
+						)}
+					</p>
+					{PORTAL_MODE === "live" && (
+						<p className="hhp-mission-final">
+							Your team chooses once, for everyone. It can&apos;t be changed after you confirm.
+						</p>
 					)}
-				</p>
-				<button type="submit" className="hhp-btn hhp-btn-primary" disabled={!selected}>
+					{confirmError && (
+						<p className="hhp-feedback is-invalid" role="alert">
+							<span className="hhp-feedback-led" aria-hidden="true" />
+							<span>{CONFIRM_ERRORS[confirmError]}</span>
+						</p>
+					)}
+				</div>
+				<button type="submit" className="hhp-btn hhp-btn-primary" disabled={!selected || confirming}>
 					<span className="hhp-btn-led" aria-hidden="true" />
-					<span>Confirm mission</span>
+					<span>{confirming ? "Saving…" : "Confirm mission"}</span>
 				</button>
 			</div>
 		</form>

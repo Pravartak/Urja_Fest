@@ -1,16 +1,21 @@
 /**
  * Firestore layout for the HackHive mission release. Keep in sync with
- * firestore.rules and scripts/seed-hackhive-missions.mjs.
+ * firestore.rules, scripts/seed-hackhive-missions.mjs and
+ * scripts/export-hackhive-mission-choices.mjs.
  *
  *   HackHiveConfig/missionRelease  { released, updatedAt, updatedBy }
  *     Public, so team portals can watch it live. Flipped from /hackhive/admin.
  *   HackHiveMissions/{missionId}   { code, title, summary, order }
  *     Readable by participants only while `released` is true.
+ *   HackHiveMissionChoices/{4-digit access code}  { teamId, missionId, chosenAt }
+ *     The team's chosen mission, saved by its portal once released. A team
+ *     chooses once and can't change it; organizers can, in the console.
  */
 import type { DocumentData } from "firebase/firestore";
 
 export const RELEASE_DOC_PATH = "HackHiveConfig/missionRelease";
 export const MISSIONS_COLLECTION = "HackHiveMissions";
+export const MISSION_CHOICES_COLLECTION = "HackHiveMissionChoices";
 
 export interface MissionRecord {
 	id: string;
