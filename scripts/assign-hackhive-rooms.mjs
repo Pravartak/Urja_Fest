@@ -32,11 +32,11 @@ const MEMBER_FIELDS = ["teamLeader", "member2", "member3", "member4", "member5"]
 // in this order, so a team of 5 goes to Room 13 only once Room 11 & 12 is full.
 // Keep the names in sync with HACKHIVE_ROOMS in lib/hackhiveRooms.ts.
 const ROOMS = [
-	{ name: "Room 11 & 12", slots: { 5: 9 } },
+	{ name: "Room 11 & 12", slots: { 5: 7, 4: 1, 3:1 } },
 	{ name: "Library", slots: { 4: 6 } },
 	{ name: "Room 13", slots: { 5: 5 } },
 	{ name: "Room 14", slots: { 3: 5 } },
-	{ name: "Room 5", slots: { 1: 2, 2: 3 } },
+	{ name: "Room 5", slots: { 1: 1, 2: 3 } },
 ];
 
 const dryRun = process.argv.includes("--dry-run");
