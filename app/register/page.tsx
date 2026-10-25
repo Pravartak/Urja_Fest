@@ -85,6 +85,9 @@ const getTeamSize = (eventId: string): TeamSize =>
 
 const emptyTeamMembers = () => TEAM_MEMBER_POSITIONS.map(() => "");
 
+// Flip to false to reopen general registrations.
+const REGISTRATION_CLOSED = true;
+
 export default function Register() {
 	const [colleges, setColleges] = useState<College[]>([]);
 	const [day1Categories, setDay1Categories] = useState<EventCategory[]>([]);
@@ -268,6 +271,8 @@ export default function Register() {
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 
+		if (REGISTRATION_CLOSED) return;
+
 		if (!formData.paymentProof) {
 			setSubmitError("Please upload your payment proof image.");
 			return;
@@ -423,6 +428,27 @@ export default function Register() {
 								<p style={{ color: "var(--text-dim)" }}>
 									Welcome to URJA 2026! Your registration details have been sent
 									for approval.
+								</p>
+							</div>
+						) : REGISTRATION_CLOSED ? (
+							<div
+								style={{
+									background: "var(--card)",
+									border: "1px solid var(--border)",
+									borderRadius: "18px",
+									padding: "40px",
+									textAlign: "center",
+								}}>
+								<h3
+									style={{
+										fontSize: "1.5rem",
+										marginBottom: "10px",
+										color: "var(--gold)",
+									}}>
+									Registrations Closed
+								</h3>
+								<p style={{ color: "var(--text-dim)" }}>
+									General registrations for URJA 2026 are now closed.
 								</p>
 							</div>
 						) : (
