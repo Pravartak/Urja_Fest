@@ -36,8 +36,8 @@ const ROOMS = [
 	{ name: "Library", slots: { 4: 6 } },
 	{ name: "Room 13", slots: { 5: 5 } },
 	{ name: "Room 14", slots: { 3: 5 } },
-	{ name: "Room 5", slots: { 1: 1, 2: 3 } },
-	{ name: "Room 6", slots: { 3:2 } },
+	{ name: "Room 1", slots: { 1: 1, 2: 3 } },
+	{ name: "Room 2", slots: { 3:2 } },
 ];
 
 const dryRun = process.argv.includes("--dry-run");
