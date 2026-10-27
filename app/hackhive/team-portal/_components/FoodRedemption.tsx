@@ -4,12 +4,14 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type QrScanner from "qr-scanner";
 import type { Team } from "../_data/portalConfig";
 import {
+	DRINKS,
 	FOOD_SLOTS,
 	claimFood,
 	isStallQr,
 	itemsLeft,
 	toStallCode,
 	watchClaims,
+	type Drink,
 	type FoodClaim,
 	type FoodItem,
 } from "../_lib/foodRedemption";
@@ -21,18 +23,23 @@ interface Props {
 	team: Team;
 }
 
-type Counts = Record<FoodItem, number>;
+/** What the member has picked for the next scan: biryani plus a drink mix. */
+interface Picks {
+	biryani: boolean;
+	drinks: Record<Drink, number>;
+}
 
 type Tone = "idle" | "invalid";
 
 interface Served {
-	lines: { name: string; counts: Counts }[];
+	lines: { name: string; picks: Picks }[];
 	at: Date;
 }
 
-const ITEMS: FoodItem[] = ["biryani", "drink"];
-const NONE: Counts = { biryani: 0, drink: 0 };
+const NONE: Picks = { biryani: false, drinks: { Mojito: 0, Sprite: 0 } };
 const DRINKS_EACH = FOOD_SLOTS.drink.length;
+
+const totalDrinks = (drinks: Record<Drink, number>) => DRINKS.reduce((sum, d) => sum + drinks[d], 0);
 
 const formatTime = (date: Date) =>
 	date.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
@@ -40,19 +47,15 @@ const formatTime = (date: Date) =>
 const listNames = (names: string[]) =>
 	names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 
-/** "2 × Biryani", "1 × Drink": "" for none. */
-const amount = (item: FoodItem, n: number) =>
-	!n ? "" : item === "biryani" ? `${n} × Biryani` : `${n} × ${n === 1 ? "Drink" : "Drinks"}`;
-
-/** "2 Biryani + 3 Drinks", for the scan button. */
-const summary = (counts: Counts) =>
-	[counts.biryani && `${counts.biryani} Biryani`, counts.drink && `${counts.drink} ${counts.drink === 1 ? "Drink" : "Drinks"}`]
+/** "2 Biryani + 1 Mojito + 2 Sprite", for the scan button. */
+const summary = (biryani: number, drinks: Record<Drink, number>) =>
+	[biryani && `${biryani} Biryani`, ...DRINKS.map((d) => drinks[d] && `${drinks[d]} ${d}`)]
 		.filter(Boolean)
 		.join(" + ");
 
-/** "Biryani + 2 Drinks", for one member on the serve screen. */
-const memberLine = (counts: Counts) =>
-	[counts.biryani && "Biryani", counts.drink && (counts.drink === 1 ? "1 Drink" : `${counts.drink} Drinks`)]
+/** "Biryani + 2 Mojito", for one member on the serve screen. */
+const memberLine = (picks: Picks) =>
+	[picks.biryani && "Biryani", ...DRINKS.map((d) => picks.drinks[d] && (picks.drinks[d] === 1 ? d : `${picks.drinks[d]} ${d}`))]
 		.filter(Boolean)
 		.join(" + ");
 
@@ -84,9 +87,10 @@ async function cameraProblem(): Promise<string> {
 }
 
 /**
- * Each member gets one biryani and two drinks, whenever they like: pick what
- * each member is having now, then scan the QR at the food stall. Once everyone
- * has had everything the scanner is gone for good, on every device the team uses.
+ * Each member gets one biryani and two drinks — any mix of Mojito and Sprite —
+ * whenever they like: pick what each member is having now, then scan the QR at
+ * the food stall. Once everyone has had everything the scanner is gone for
+ * good, on every device the team uses.
  */
 export default function FoodRedemption({ accessCode, team }: Props) {
 	const root = useRef<HTMLElement>(null);
@@ -101,7 +105,7 @@ export default function FoodRedemption({ accessCode, team }: Props) {
 	const [watchFailed, setWatchFailed] = useState(false);
 	const [watchAttempt, setWatchAttempt] = useState(0);
 	/** What each member (by id) is having in the next scan. */
-	const [order, setOrder] = useState<Record<string, Counts>>({});
+	const [order, setOrder] = useState<Record<string, Picks>>({});
 	const [scanning, setScanning] = useState(false);
 	const [claiming, setClaiming] = useState(false);
 	const [typed, setTyped] = useState("");
@@ -117,17 +121,20 @@ export default function FoodRedemption({ accessCode, team }: Props) {
 	}, [accessCode, watchAttempt]);
 
 	const left = (member: string, item: FoodItem) => (claims ? itemsLeft(claims, member, item) : 0);
-	const allDone = !!claims && team.members.every((m) => ITEMS.every((i) => left(m.id, i) === 0));
+	const allDone = !!claims && team.members.every((m) => left(m.id, "biryani") + left(m.id, "drink") === 0);
 
 	// Claimed elsewhere (another tab or phone): never ask for more than is left.
 	useEffect(() => {
 		if (!claims) return;
 		setOrder((current) => {
-			const next: Record<string, Counts> = {};
-			for (const [id, counts] of Object.entries(current)) {
+			const next: Record<string, Picks> = {};
+			for (const [id, picks] of Object.entries(current)) {
+				const drinksLeft = itemsLeft(claims, id, "drink");
+				const mojito = Math.min(picks.drinks.Mojito, drinksLeft);
+				const sprite = Math.min(picks.drinks.Sprite, drinksLeft - mojito);
 				next[id] = {
-					biryani: Math.min(counts.biryani, itemsLeft(claims, id, "biryani")),
-					drink: Math.min(counts.drink, itemsLeft(claims, id, "drink")),
+					biryani: picks.biryani && itemsLeft(claims, id, "biryani") > 0,
+					drinks: { Mojito: mojito, Sprite: sprite },
 				};
 			}
 			return next;
@@ -138,16 +145,23 @@ export default function FoodRedemption({ accessCode, team }: Props) {
 		if (allDone) setScanning(false);
 	}, [allDone]);
 
-	const countsFor = (id: string) => order[id] ?? NONE;
-	const setCount = (id: string, item: FoodItem, n: number) =>
-		setOrder((current) => ({ ...current, [id]: { ...(current[id] ?? NONE), [item]: n } }));
+	const picksFor = (id: string) => order[id] ?? NONE;
+	const setBiryani = (id: string, on: boolean) =>
+		setOrder((current) => ({ ...current, [id]: { ...(current[id] ?? NONE), biryani: on } }));
+	const setDrink = (id: string, drink: Drink, n: number) =>
+		setOrder((current) => {
+			const picks = current[id] ?? NONE;
+			return { ...current, [id]: { ...picks, drinks: { ...picks.drinks, [drink]: n } } };
+		});
 
 	const orders = team.members
-		.map((member) => ({ member, counts: countsFor(member.id) }))
-		.filter(({ counts }) => counts.biryani + counts.drink > 0);
-	const totals: Counts = {
-		biryani: orders.reduce((sum, o) => sum + o.counts.biryani, 0),
-		drink: orders.reduce((sum, o) => sum + o.counts.drink, 0),
+		.map((member) => ({ member, picks: picksFor(member.id) }))
+		.filter(({ picks }) => picks.biryani || totalDrinks(picks.drinks) > 0);
+	const totals = {
+		biryani: orders.filter((o) => o.picks.biryani).length,
+		drinks: Object.fromEntries(
+			DRINKS.map((d) => [d, orders.reduce((sum, o) => sum + o.picks.drinks[d], 0)]),
+		) as Record<Drink, number>,
 	};
 	const nothingPicked = orders.length === 0;
 
@@ -163,11 +177,16 @@ export default function FoodRedemption({ accessCode, team }: Props) {
 		busy.current = true;
 		setClaiming(true);
 		setScanning(false);
-		const result = await claimFood(accessCode, team.id, orders, stallCode);
+		const result = await claimFood(
+			accessCode,
+			team.id,
+			orders.map(({ member, picks }) => ({ member, biryani: picks.biryani, drinks: picks.drinks })),
+			stallCode,
+		);
 		busy.current = false;
 		setClaiming(false);
 		if (!("reason" in result)) {
-			setServed({ lines: orders.map(({ member, counts }) => ({ name: member.name, counts })), at: result.claimedAt });
+			setServed({ lines: orders.map(({ member, picks }) => ({ name: member.name, picks })), at: result.claimedAt });
 			setOrder({});
 			setTyped("");
 			setMessage(null);
@@ -253,7 +272,10 @@ export default function FoodRedemption({ accessCode, team }: Props) {
 
 	const memberStatus = (id: string) => {
 		const biryani = left(id, "biryani") === 0 ? "Biryani ✓" : "Biryani —";
-		return `${biryani} · Drinks ${DRINKS_EACH - left(id, "drink")}/${DRINKS_EACH}`;
+		const had = claims?.filter((c) => c.member === id && c.item === "drink") ?? [];
+		// Claims made before drinks were recorded have no name: show the count alone.
+		const names = had.map((c) => c.drink).filter(Boolean).join(", ");
+		return `${biryani} · Drinks ${had.length}/${DRINKS_EACH}${names ? ` (${names})` : ""}`;
 	};
 
 	let body;
@@ -262,16 +284,22 @@ export default function FoodRedemption({ accessCode, team }: Props) {
 			<div className="hhp-food-serve" role="status" aria-live="assertive">
 				<span className="hhp-spec-code">Show this to the stall volunteer</span>
 				<p className="hhp-food-serve-count">
-					{ITEMS.map((item) => {
-						const n = served.lines.reduce((sum, line) => sum + line.counts[item], 0);
-						return n ? <span key={item}>Serve {amount(item, n)}</span> : null;
-					})}
+					{[
+						["Biryani", served.lines.filter((line) => line.picks.biryani).length] as const,
+						...DRINKS.map((d) => [d, served.lines.reduce((sum, line) => sum + line.picks.drinks[d], 0)] as const),
+					].map(([label, n]) =>
+						n ? (
+							<span key={label}>
+								Serve {n} × {label}
+							</span>
+						) : null,
+					)}
 				</p>
 				<ul className="hhp-food-serve-names">
-					{served.lines.map(({ name, counts }) => (
+					{served.lines.map(({ name, picks }) => (
 						<li key={name}>
 							<span>{name}</span>
-							<span className="hhp-food-serve-what">{memberLine(counts)}</span>
+							<span className="hhp-food-serve-what">{memberLine(picks)}</span>
 						</li>
 					))}
 				</ul>
@@ -315,10 +343,11 @@ export default function FoodRedemption({ accessCode, team }: Props) {
 					<legend className="hhp-field-label">Who&apos;s having what now?</legend>
 					<ul>
 						{team.members.map((m) => {
-							const counts = countsFor(m.id);
+							const picks = picksFor(m.id);
 							const biryaniLeft = left(m.id, "biryani");
 							const drinksLeft = left(m.id, "drink");
-							const picked = counts.biryani + counts.drink > 0;
+							const drinksPicked = totalDrinks(picks.drinks);
+							const picked = picks.biryani || drinksPicked > 0;
 							const biryaniId = `hhp-food-${m.id}-biryani`;
 							return (
 								<li
@@ -337,33 +366,42 @@ export default function FoodRedemption({ accessCode, team }: Props) {
 											<input
 												id={biryaniId}
 												type="checkbox"
-												checked={counts.biryani > 0}
-												onChange={(e) => setCount(m.id, "biryani", e.target.checked ? 1 : 0)}
+												checked={picks.biryani}
+												onChange={(e) => setBiryani(m.id, e.target.checked)}
 												disabled={!biryaniLeft}
 											/>
 											<label htmlFor={biryaniId}>{biryaniLeft || loading ? "Biryani" : "Biryani had"}</label>
 										</span>
-										<span
-											className={`hhp-food-stepper${drinksLeft || loading ? "" : " is-used"}`}
-											role="group"
-											aria-label={`Drinks for ${m.name}`}>
-											<span className="hhp-food-stepper-label">{drinksLeft || loading ? "Drinks" : "Drinks had"}</span>
-											<button
-												type="button"
-												aria-label={`One drink fewer for ${m.name}`}
-												onClick={() => setCount(m.id, "drink", counts.drink - 1)}
-												disabled={counts.drink === 0}>
-												−
-											</button>
-											<output aria-live="polite">{counts.drink}</output>
-											<button
-												type="button"
-												aria-label={`One more drink for ${m.name}`}
-												onClick={() => setCount(m.id, "drink", counts.drink + 1)}
-												disabled={counts.drink >= drinksLeft}>
-												+
-											</button>
-										</span>
+										{!loading && drinksLeft === 0 ? (
+											<span className="hhp-food-stepper is-used">
+												<span className="hhp-food-stepper-label">Drinks had</span>
+											</span>
+										) : (
+											DRINKS.map((d) => (
+												<span
+													key={d}
+													className="hhp-food-stepper"
+													role="group"
+													aria-label={`${d}s for ${m.name}`}>
+													<span className="hhp-food-stepper-label">{d}</span>
+													<button
+														type="button"
+														aria-label={`One ${d} fewer for ${m.name}`}
+														onClick={() => setDrink(m.id, d, picks.drinks[d] - 1)}
+														disabled={picks.drinks[d] === 0}>
+														−
+													</button>
+													<output aria-live="polite">{picks.drinks[d]}</output>
+													<button
+														type="button"
+														aria-label={`One more ${d} for ${m.name}`}
+														onClick={() => setDrink(m.id, d, picks.drinks[d] + 1)}
+														disabled={drinksPicked >= drinksLeft}>
+														+
+													</button>
+												</span>
+											))
+										)}
 									</div>
 								</li>
 							);
@@ -396,7 +434,7 @@ export default function FoodRedemption({ accessCode, team }: Props) {
 									? "Claiming..."
 									: nothingPicked
 										? "Pick what each member is having"
-										: `Scan stall QR · ${summary(totals)}`}
+										: `Scan stall QR · ${summary(totals.biryani, totals.drinks)}`}
 							</span>
 						</button>
 					)}
@@ -447,8 +485,9 @@ export default function FoodRedemption({ accessCode, team }: Props) {
 				<span className="hhp-kicker">// FUEL STATION</span>
 				<h2 id="hhp-food-title">Free food</h2>
 				<p>
-					Every member gets one box of biryani and two drinks, whenever they like. At the HackHive food stall,
-					pick what each member is having, then scan the stall&apos;s QR code from here.
+					Every member gets one box of biryani and two drinks — any mix of Mojito and Sprite — whenever they
+					like. At the HackHive food stall, pick what each member is having, then scan the stall&apos;s QR
+					code from here.
 				</p>
 			</div>
 
