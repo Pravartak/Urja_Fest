@@ -1,31 +1,27 @@
 /**
- * Live mode only: team members claim their free food (one biryani and two
- * drinks each — any mix of Mojito and Sprite, each claim recording which) by
- * scanning the QR at the food stall (lib/hackhiveFood.ts). Claims are stored
- * under the team's access code, so they hold across reloads, tabs and phones.
+ * Live mode only: team members claim their free food (one biryani, two drinks
+ * each) by scanning the QR at the food stall (lib/hackhiveFood.ts). Claims are
+ * stored under the team's access code, so they hold across reloads, tabs and
+ * phones.
  */
 
 import {
-	DRINKS,
 	FOOD_CLAIMS_SUBCOLLECTION,
 	FOOD_REDEMPTIONS_COLLECTION,
 	FOOD_SLOTS,
 	FOOD_STALL_CODE_PREFIX,
-	type Drink,
 	type FoodItem,
 } from "@/lib/hackhiveFood";
 import type { TeamMember } from "../_data/portalConfig";
 import type { Unsubscribe } from "./portalApi";
 
-export { DRINKS, FOOD_SLOTS, type Drink, type FoodItem };
+export { FOOD_SLOTS, type FoodItem };
 
 export interface FoodClaim {
 	/** A Teams field name: teamLeader, member2..member5. */
 	member: string;
 	slot: string;
 	item: FoodItem;
-	/** Which drink this claim was; absent on biryani and on claims made before drinks were recorded. */
-	drink?: Drink;
 }
 
 export type ClaimResult =
@@ -79,12 +75,7 @@ export function watchClaims(
 					onChange(
 						snap.docs.map((d) => {
 							const data = d.data();
-							return {
-								member: String(data.member),
-								slot: String(data.slot),
-								item: data.item as FoodItem,
-								drink: typeof data.drink === "string" ? (data.drink as Drink) : undefined,
-							};
+							return { member: String(data.member), slot: String(data.slot), item: data.item as FoodItem };
 						}),
 					);
 				},
@@ -100,12 +91,13 @@ export function watchClaims(
 	};
 }
 
-/** What one member is having in this scan: a biryani or not, and a drink mix. */
+/** What one member is having in this scan: how many of each item. */
 export interface FoodOrder {
 	member: TeamMember;
-	biryani: boolean;
-	drinks: Record<Drink, number>;
+	counts: Record<FoodItem, number>;
 }
+
+const ITEMS = Object.keys(FOOD_SLOTS) as FoodItem[];
 
 /**
  * Claims every order in one go, all or nothing. A transaction: it picks each
@@ -122,36 +114,29 @@ export async function claimFood(
 		const [fs, { db }] = await firestore();
 		const claims = fs.collection(db, ...claimsPath(accessCode));
 		const usedUp = await fs.runTransaction(db, async (tx) => {
-			const picks: { member: TeamMember; item: FoodItem; slot: string; drink?: Drink }[] = [];
+			const picks: { member: TeamMember; item: FoodItem; slot: string }[] = [];
 			const none: string[] = [];
-			for (const { member, biryani, drinks } of orders) {
+			for (const { member, counts } of orders) {
 				let short = false;
-				if (biryani) {
-					if ((await tx.get(fs.doc(claims, `${member.id}_biryani`))).exists()) short = true;
-					else picks.push({ member, item: "biryani", slot: "biryani" });
-				}
-				// Each drink of the mix takes the member's next free drink slot.
-				const wanted = DRINKS.flatMap((drink) => Array<Drink>(drinks[drink]).fill(drink));
-				if (wanted.length) {
+				for (const item of ITEMS) {
+					if (!counts[item]) continue;
 					const free: string[] = [];
-					for (const slot of FOOD_SLOTS.drink) {
+					for (const slot of FOOD_SLOTS[item]) {
 						if (!(await tx.get(fs.doc(claims, `${member.id}_${slot}`))).exists()) free.push(slot);
 					}
-					if (free.length < wanted.length) short = true;
-					else picks.push(...wanted.map((drink, i) => ({ member, item: "drink" as const, slot: free[i], drink })));
+					if (free.length < counts[item]) short = true;
+					else picks.push(...free.slice(0, counts[item]).map((slot) => ({ member, item, slot })));
 				}
 				if (short) none.push(member.name);
 			}
 			if (none.length) return none;
-			for (const { member, item, slot, drink } of picks) {
+			for (const { member, item, slot } of picks) {
 				tx.set(fs.doc(claims, `${member.id}_${slot}`), {
 					teamId,
 					member: member.id,
 					memberName: member.name,
 					item,
 					slot,
-					// The rules only allow `drink` on drink claims, so leave it off biryani.
-					...(drink ? { drink } : {}),
 					stallCode,
 					claimedAt: fs.serverTimestamp(),
 				});
