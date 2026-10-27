@@ -40,6 +40,7 @@ skills-lock.json
 #firestore
 firestore.rules
 /hackhive-access-codes*.csv
+/hackhive-food-claims*.csv
 /hackhive-rooms*.csv
 /hackhive-mission-choices*.csv
 /food-stall-qr.*
