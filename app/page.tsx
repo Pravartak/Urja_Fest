@@ -99,11 +99,7 @@ export default function Home() {
 						Where <span className="accent">Innovation</span> meets Art
 					</h2>
 					<p className="lede" style={{ margin: "0 auto" }}>
-						This festival marks the convergence of five distinguished events —
-						Prodigy, Epitome, Technotronix, Mebido, and Ignite — each of which
-						has, over the years, cultivated its own unique identity and legacy.
-						With the conclusion of their journeys, these festivals have united
-						to form a singular, comprehensive celebration.
+						URJA is the annual fest of Bakliwal Foundation College of Arts, Commerce and Science, Vashi, where innovation meets art. Over four days, students from colleges across the region come together to compete in cultural, sports, technical and management events, from literature, fine arts and solo performances to big group showcases on the main day.
 					</p>
 					<Link
 						href="/about"
